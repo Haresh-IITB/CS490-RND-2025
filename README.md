@@ -3,6 +3,8 @@ This project is a C++ implementation of the models and algorithms described in t
 
 The simulation aims to identify an optimal set of k nodes to vaccinate in a network to minimize the spread of a disease, given an initial set of infected nodes.
 
+@Author Code : Haresh Gupta 
+
 ## About The Project
 This project explores vaccination strategies on spatially structured networks. It contrasts with traditional influence maximization problems by focusing on disease-spreading dynamics where the optimization function is neither submodular nor supermodular.
 
