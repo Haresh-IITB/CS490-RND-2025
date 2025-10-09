@@ -36,32 +36,48 @@ std::vector<int> Local_search(Graph & G,
         convereged = true ; // Assume convereged 
         int currSavedCnt = evaluator(G,isVaccinable,-1,InfectedNodes) ; 
 
-        int bestSavedCnt = currSavedCnt ; // Bare minimum you want this 
-        int bestSavedIdx = -1 ; 
-        int ReplacedNode = -1 ; 
+        
+        std::set<int> temp  = S ; 
+        std::vector<bool> Considerable(G.V,1) ; // This helps to mark that if a node is already swapped by v then it most not be again swapped by v'
+        
+        std::vector<int> ReplacedNodes ; 
+        std::vector<int> ReplacingNodes ;
 
         for(int u : S){
             isVaccinable[u] = 1 ; // Un-Vaccinate u
+
+            int bestSavedCnt = currSavedCnt ; // Bare minimum you want this 
+            int bestSavedIdx = -1 ; 
+            
             for(int v = 0 ; v<G.V ; v++){
-                if(!isVaccinable[v] || G.adj_matrix[u][v] == 0) continue ; 
+                if(!isVaccinable[v] || G.adj_matrix[u][v] == 0 || !Considerable[v]) 
+                    continue ; 
                 int SavedCntV = evaluator(G,isVaccinable,v,InfectedNodes) ; 
                 if(SavedCntV > bestSavedCnt){
                     bestSavedCnt = SavedCntV ; 
                     bestSavedIdx = v ; 
-                    ReplacedNode = u ; 
                 }
             }
+
             isVaccinable[u] = 0 ; // Re-vaccinate this 
+            
+            if(bestSavedIdx != -1){
+                convereged = false ; 
+                temp.erase(u) ; 
+                temp.insert(bestSavedIdx) ; 
+                ReplacedNodes.push_back(u) ; 
+                ReplacingNodes.push_back(bestSavedIdx) ; 
+                Considerable[bestSavedIdx] = 0 ; 
+            }
         }
 
-        if(bestSavedIdx != -1){
-            convereged = false ; 
-            S.erase(ReplacedNode) ; 
-            S.insert(bestSavedIdx) ; 
-            isVaccinable[ReplacedNode] = 1 ; 
-            isVaccinable[bestSavedIdx] = 0 ;
-        }
-        std::cout << "Searched for node " << bestSavedIdx << std::endl ; 
+        S = temp ; 
+        // Fix the isVaccinable vector 
+        for(int i : ReplacedNodes)
+            isVaccinable[i] = 1 ; 
+        for(int i : ReplacingNodes)
+            isVaccinable[i] = 0 ; 
+
         iterCnt ++ ; 
     }
 

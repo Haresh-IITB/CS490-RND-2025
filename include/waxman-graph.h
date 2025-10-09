@@ -36,6 +36,7 @@ private :
     
 
 public : 
+    Graph() = default ; 
     Graph(int n) ; 
     Graph(int n, int k) ;
     

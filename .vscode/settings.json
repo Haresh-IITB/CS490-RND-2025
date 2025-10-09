@@ -48,6 +48,7 @@
         "variant": "cpp",
         "algorithm": "cpp",
         "set": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "fstream": "cpp"
     }
 }

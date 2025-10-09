@@ -1,115 +1,106 @@
 #include <iostream>
 #include <vector>
-#include <functional>
-#include <set>
+#include <string>
 #include <fstream>
+#include <set>
+#include <cmath>
+#include <functional>
+
+#include "config.h"
 #include "waxman-graph.h"
 #include "Random_number_generator.h"
-#include "strategy.h"
 #include "simulation.h"
+#include "helper.h"
 
-
-int main() {
-
-    int num_nodes = 500;      // Total nodes in the graph
-    double alpha = 0.4;       // Waxman alpha parameter (controls edge density)
-    double beta  = 0.1;       // Waxman beta parameter (controls edge length preference)
-    int k_budget = 15;         // Number of nodes we can vaccinate
-    int num_infected = 20;    // Number of initially infected nodes
-
-    std::cout << "Parameters:\n";
-    std::cout << "  - Nodes: " << num_nodes << "\n";
-    std::cout << "  - Vaccination Budget: " << k_budget << "\n";
-    std::cout << "  - Initially Infected: " << num_infected << "\n";
-    std::cout << "---------------------------\n\n";
-
-    Random_number_generator rng;
-
-    // --- Graph Generation ---
-    std::cout << "Generating Waxman graph \n";
-    Graph g(num_nodes);
-    g.generate_nodes();
-    g.generate_edges(alpha, beta);
-    std::cout << "Graph generated with " << g.V << " actual nodes.\n\n";
-
-    num_nodes = g.V;
-
-    // ---  Setup Initial Infection ---
-    std::cout << "Selecting initial infected nodes \n";
-    std::vector<int> infected_nodes;
-    std::set<int> infected_set;
-
-    while (infected_set.size() < static_cast<size_t>(num_infected)) {
-        int infected_node = static_cast<int>(rng.get_unif(0, num_nodes));
-        infected_set.insert(infected_node);
+int main(int argc, char * argv[]) {
+    
+    if (argc != 2) {
+        std::cout << "Usage: ./simulation config.txt" << std::endl;
+        return 1;
     }
 
-    // Save infected nodes to infected.csv
-    std::ofstream infected_file("results/infected.csv");
-    infected_file << "node_id\n";
-    std::cout << "Infected nodes are: ";
-    for (int node : infected_set) {
-        infected_nodes.push_back(node);
-        std::cout << node << " ";
-        infected_file << node << "\n";
-    }
-    infected_file.close();
-    std::cout << "\n\n";
+    Config parameters = initialiseConfig(std::string(argv[1]));
+    std::cout << "Configuration loaded successfully." << std::endl;
 
-
-    // --- Run Vaccination Algorithm ---
-    std::cout << "Running vaccination algorithm to find best " << k_budget << " nodes to vaccinate\n";
-
-    std::vector<int> nodes_to_vaccinate = greedy_vaccination(g, k_budget, infected_nodes,ltSimulation);
-    // std::vector<int> nodes_to_vaccinate = Local_search(g, k_budget, infected_nodes, IC_Simulation);
-
-    // Save vaccinated nodes to vaccinated.csv
-    std::ofstream vaccinated_file("results/vaccinated.csv");
-    vaccinated_file << "node_id\n";
-    std::cout << "Vaccination algorithm suggests vaccinating nodes: ";
-    for (int node : nodes_to_vaccinate) {
-        std::cout << node << " ";
-        vaccinated_file << node << "\n";
-    }
-    vaccinated_file.close();
-    std::cout << "\n\n";
-
-    // ---  Evaluate and Compare Results ---
-    std::cout << "Step 4: Evaluating the impact of vaccination...\n";
-    std::vector<bool> isVaccinable(num_nodes, true);
-    for(int node : infected_nodes) {
-        isVaccinable[node] = false;
-    }
-
-    // Run simulation WITHOUT vaccination
-    int saved_without_vaccination = ltSimulation(g, isVaccinable, -1, infected_nodes);
-    std::cout << "Result without vaccination: " << saved_without_vaccination << " nodes were saved.\n";
-
-    for(int node : nodes_to_vaccinate) {
-        isVaccinable[node] = false;
+    // Select Simulation Model based on Config
+    std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int>&)> evaluator;
+    if (parameters.model == "IC") {
+        evaluator = IC_Simulation;
+        std::cout << "Model selected: Independent Cascade (IC)" << std::endl;
+    } else {
+        evaluator = ltSimulation; // Default to LT
+        std::cout << "Model selected: Linear Threshold (LT)" << std::endl;
     }
     
-    // Run simulation WITH vaccination
-    int saved_with_vaccination = ltSimulation(g, isVaccinable, -1, infected_nodes);
-    std::cout << "Result with vaccination:    " << saved_with_vaccination << " nodes were saved.\n";
+    std::ofstream results_file("results/experiment_results.csv");
+    results_file << "NumNodes,K_Percent,Infected_Percent,Algorithm,NodesSaved,TimeTaken_ms\n";
 
-    int extra_saved = saved_with_vaccination - saved_without_vaccination;
-    std::cout << "Vaccination saved an additional " << extra_saved << " nodes.\n\n";
+    Random_number_generator rng;
+    Graph g_final;
+    std::vector<int> last_infected_nodes;
+    std::vector<int> last_vaccinated_nodes;
 
-    // Save the final results to results.csv
-    std::ofstream results_file("results/results.csv");
-    results_file << "category,saved_nodes\n";
-    results_file << "Without Vaccination," << saved_without_vaccination << "\n";
-    results_file << "With Vaccination," << saved_with_vaccination << "\n";
+    for (int k_percent : parameters.k_budget) {
+        for (int infected_percent : parameters.infected) {
+            for (int num_nodes_config : parameters.nodes) {
+                
+                std::cout << "\n------------------------------------------------------------\n";
+                std::cout << "Starting Experiment: Nodes=" << num_nodes_config 
+                          << ", k=" << k_percent << "%, infected=" << infected_percent << "%" << std::endl;
+                std::cout << "------------------------------------------------------------\n";
+
+                Graph current_g(num_nodes_config);
+                current_g.generate_nodes();
+                current_g.generate_edges(parameters.alpha, parameters.beta);
+                
+                int k_budget = static_cast<int>(round((k_percent / 100.0) * current_g.V));
+                int num_infected = static_cast<int>(round((infected_percent / 100.0) * current_g.V));
+
+                std::vector<int> infected_nodes;
+                std::set<int> infected_set;
+                while (infected_set.size() < static_cast<size_t>(num_infected)) {
+                    int node = static_cast<int>(rng.get_unif(0, current_g.V));
+                    infected_set.insert(node);
+                }
+                for (int node : infected_set) infected_nodes.push_back(node);
+                
+                std::vector<int> vaccinated_nodes_result = run_single_experiment(
+                    current_g, k_budget, k_percent, num_infected, 
+                    infected_percent, infected_nodes, evaluator, results_file
+                );
+
+                // Check if this is the final experiment to save its state for visualization
+                if (k_percent == parameters.k_budget.back() && 
+                    infected_percent == parameters.infected.back() && 
+                    num_nodes_config == parameters.nodes.back()) {
+                    
+                    g_final = current_g;
+                    last_infected_nodes = infected_nodes;
+                    last_vaccinated_nodes = vaccinated_nodes_result;
+                }
+            }
+        }
+    }
+
     results_file.close();
+    std::cout << "\nAll experiments finished. Results saved to experiment_results.csv" << std::endl;
 
+    // Save data from the FINAL experiment for visualization
+    std::cout << "Saving data from the last run for visualization..." << std::flush;
+    
+    g_final.save_nodes_to_file("results/graph/nodes.csv", "results/graph/edges.csv");
 
-    // --- Save Graph for Visualization ---
-    std::cout << "Step 5: Saving graph data to CSV files...\n";
-    g.save_nodes_to_file("results/graph/nodes.csv", "results/graph/edges.csv");
-    std::cout << "\n--- Simulation Complete ---\n";
-    std::cout << "You can now run 'visualize.py' to see the graph.\n";
+    std::ofstream infected_file("results/infected.csv");
+    infected_file << "node_id\n";
+    for(int node : last_infected_nodes) infected_file << node << "\n";
+    infected_file.close();
+
+    std::ofstream vaccinated_file("results/vaccinated.csv");
+    vaccinated_file << "node_id\n";
+    for(int node : last_vaccinated_nodes) vaccinated_file << node << "\n";
+    vaccinated_file.close();
+
+    std::cout << " Done." << std::endl;
 
     return 0;
 }
-

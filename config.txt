@@ -1,0 +1,13 @@
+# Note : Don't give spaces around the = sign 
+
+nodes=[64,128,256]
+alpha=0.4
+beta=0.1
+
+# In percentage 
+k=[10]
+
+# In percentage 
+infected=[10] 
+
+model="IC"
