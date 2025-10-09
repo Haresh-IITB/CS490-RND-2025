@@ -5,9 +5,9 @@ alpha=0.4
 beta=0.1
 
 # In percentage 
-k=[10]
+k=[10,5,15]
 
 # In percentage 
-infected=[10] 
+infected=[10,20] 
 
 model="IC"

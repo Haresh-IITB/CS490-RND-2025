@@ -41,6 +41,6 @@ Follow these instructions to compile and run the simulation on your local machin
 * From the **project's root directory**, run the make command. This will compile all source files and place the executable in the bin/ directory.
 
 ## Usage
-* To run the simulation: **./bin/simulation** 
+* To run the simulation: **./bin/simulation config.txt** 
 * This will generate a random graph that is spatially aware, and then perform the various vacciantion stratergies and store the results in the results/ directory.
 * To visualize the graph generated, along with seeing which nodes are vaccinated and infected run **python3 scripts/visualise.py**

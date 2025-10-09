@@ -11,7 +11,6 @@ def visualize_network_state(
     infected_file="results/infected.csv", 
     vaccinated_file="results/vaccinated.csv"
 ):
-    """Visualizes the graph state of a single simulation run."""
     print("--- Generating Network State Visualization ---")
     
     # Data Loading and Validation
@@ -29,8 +28,7 @@ def visualize_network_state(
 
     infected_nodes = set(infected_df['node_id'])
     vaccinated_nodes = set(vaccinated_df['node_id'])
-    
-    # Build the Graph
+
     G = nx.Graph()
     positions = {}
     node_colors = {}
@@ -79,8 +77,9 @@ def visualize_network_state(
     plt.tight_layout()
     plt.show()
 
+
 def plot_performance_graphs(results_file="results/experiment_results.csv"):
-    """Generates performance plots similar to those in the paper."""
+
     print("\n--- Generating Performance Plots from experiment_results.csv ---")
     
     if not os.path.exists(results_file):
@@ -90,7 +89,6 @@ def plot_performance_graphs(results_file="results/experiment_results.csv"):
     df = pd.read_csv(results_file)
     sns.set_theme(style="whitegrid")
     
-    # 1. Log of Time Taken vs. Log of Network Size
     df_time = df[(df['K_Percent'] == 10) & (df['Infected_Percent'] == 10)]
     
     if not df_time.empty:
@@ -106,7 +104,6 @@ def plot_performance_graphs(results_file="results/experiment_results.csv"):
         plt.tight_layout()
         plt.show()
 
-    # 2. Nodes Saved vs. Vaccination Budget %
     largest_node_size = df['NumNodes'].max()
     df_budget = df[(df['NumNodes'] == largest_node_size) & (df['Infected_Percent'] == 10)]
 
