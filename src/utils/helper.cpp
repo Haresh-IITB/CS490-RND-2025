@@ -11,12 +11,12 @@ int evaluate_solution(
 {
     std::vector<bool> is_vaccinable(g.V, true);
     for (int node : infected_nodes) {
-        if (node < g.V) is_vaccinable[node] = false;
+        is_vaccinable[node] = false;
     }
     for (int node : vaccinated_nodes) {
-        if (node < g.V) is_vaccinable[node] = false;
+        is_vaccinable[node] = false;
     }
-    // The evaluator function returns the number of nodes *not* infected at the end
+
     return evaluator(g, is_vaccinable, -1, infected_nodes);
 }
 

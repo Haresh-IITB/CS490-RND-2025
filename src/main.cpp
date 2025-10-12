@@ -5,7 +5,6 @@
 #include <set>
 #include <cmath>
 #include <functional>
-
 #include "config.h"
 #include "waxman-graph.h"
 #include "Random_number_generator.h"
@@ -44,10 +43,10 @@ int main(int argc, char * argv[]) {
         for (int infected_percent : parameters.infected) {
             for (int num_nodes_config : parameters.nodes) {
                 
-                std::cout << "\n------------------------------------------------------------\n";
+                std::cout << "\n";
                 std::cout << "Starting Experiment: Nodes=" << num_nodes_config 
                           << ", k=" << k_percent << "%, infected=" << infected_percent << "%" << std::endl;
-                std::cout << "------------------------------------------------------------\n";
+                std::cout << "\n";
 
                 Graph current_g(num_nodes_config);
                 current_g.generate_nodes();
