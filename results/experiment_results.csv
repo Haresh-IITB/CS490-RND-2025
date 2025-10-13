@@ -1,55 +1,73 @@
 NumNodes,K_Percent,Infected_Percent,Algorithm,NodesSaved,TimeTaken_ms
 64,10,10,Greedy,58,1
-64,10,10,Local Search,58,0
+64,10,10,Local Search,57,0
 64,10,10,Hill Climbing,58,1
-128,10,10,Greedy,113,42
-128,10,10,Local Search,112,27
-128,10,10,Hill Climbing,115,41
-254,10,10,Greedy,79,998
-254,10,10,Local Search,80,360
-254,10,10,Hill Climbing,92,7601
-63,10,20,Greedy,50,1
-63,10,20,Local Search,44,0
-63,10,20,Hill Climbing,50,1
-127,10,20,Greedy,102,27
-127,10,20,Local Search,94,4
-127,10,20,Hill Climbing,102,17
-256,10,20,Greedy,73,950
-256,10,20,Local Search,76,193
-256,10,20,Hill Climbing,79,3126
-64,5,10,Greedy,55,0
-64,5,10,Local Search,51,0
-64,5,10,Hill Climbing,55,0
-128,5,10,Greedy,114,8
-128,5,10,Local Search,109,1
-128,5,10,Hill Climbing,114,6
-256,5,10,Greedy,63,566
-256,5,10,Local Search,58,149
-256,5,10,Hill Climbing,63,520
+64,10,10,Page Rank,57,1
+128,10,10,Greedy,115,17
+128,10,10,Local Search,114,3
+128,10,10,Hill Climbing,115,12
+128,10,10,Page Rank,105,4
+258,10,10,Greedy,70,1110
+258,10,10,Local Search,73,434
+258,10,10,Hill Climbing,73,3882
+258,10,10,Page Rank,54,15
+64,10,20,Greedy,51,2
+64,10,20,Local Search,46,0
+64,10,20,Hill Climbing,51,1
+64,10,20,Page Rank,36,0
+128,10,20,Greedy,94,29
+128,10,20,Local Search,89,9
+128,10,20,Hill Climbing,95,46
+128,10,20,Page Rank,77,3
+256,10,20,Greedy,61,1021
+256,10,20,Local Search,58,473
+256,10,20,Hill Climbing,62,1762
+256,10,20,Page Rank,40,0
+65,5,10,Greedy,58,0
+65,5,10,Local Search,57,0
+65,5,10,Hill Climbing,58,0
+65,5,10,Page Rank,57,0
+127,5,10,Greedy,107,13
+127,5,10,Local Search,109,3
+127,5,10,Hill Climbing,111,34
+127,5,10,Page Rank,89,3
+256,5,10,Greedy,84,499
+256,5,10,Local Search,85,143
+256,5,10,Hill Climbing,84,457
+256,5,10,Page Rank,69,15
 64,5,20,Greedy,50,0
-64,5,20,Local Search,49,0
+64,5,20,Local Search,48,0
 64,5,20,Hill Climbing,50,0
-127,5,20,Greedy,94,13
-127,5,20,Local Search,84,2
-127,5,20,Hill Climbing,96,34
-256,5,20,Greedy,57,501
-256,5,20,Local Search,59,180
-256,5,20,Hill Climbing,61,2315
+64,5,20,Page Rank,46,0
+128,5,20,Greedy,80,18
+128,5,20,Local Search,77,6
+128,5,20,Hill Climbing,80,15
+128,5,20,Page Rank,69,3
+256,5,20,Greedy,55,506
+256,5,20,Local Search,51,92
+256,5,20,Hill Climbing,55,472
+256,5,20,Page Rank,46,15
 64,15,10,Greedy,58,1
-64,15,10,Local Search,57,0
+64,15,10,Local Search,58,0
 64,15,10,Hill Climbing,58,1
-129,15,10,Greedy,116,19
-129,15,10,Local Search,116,1
-129,15,10,Hill Climbing,116,15
-258,15,10,Greedy,81,1652
-258,15,10,Local Search,85,516
-258,15,10,Hill Climbing,83,2653
+64,15,10,Page Rank,58,0
+128,15,10,Greedy,93,66
+128,15,10,Local Search,113,61
+128,15,10,Hill Climbing,115,288
+128,15,10,Page Rank,62,4
+256,15,10,Greedy,101,1452
+256,15,10,Local Search,103,393
+256,15,10,Hill Climbing,119,13571
+256,15,10,Page Rank,79,15
 64,15,20,Greedy,51,2
-64,15,20,Local Search,48,0
+64,15,20,Local Search,51,0
 64,15,20,Hill Climbing,51,2
-128,15,20,Greedy,94,53
-128,15,20,Local Search,93,11
-128,15,20,Hill Climbing,101,203
-255,15,20,Greedy,99,1204
-255,15,20,Local Search,90,238
-255,15,20,Hill Climbing,103,3697
+64,15,20,Page Rank,48,0
+127,15,20,Greedy,98,47
+127,15,20,Local Search,96,9
+127,15,20,Hill Climbing,102,128
+127,15,20,Page Rank,78,3
+257,15,20,Greedy,78,1458
+257,15,20,Local Search,80,380
+257,15,20,Hill Climbing,80,3414
+257,15,20,Page Rank,63,16

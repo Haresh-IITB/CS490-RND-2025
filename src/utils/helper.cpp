@@ -62,5 +62,15 @@ std::vector<int> run_single_experiment(
     results_file << actual_num_nodes << "," << k_percent << "," << infected_percent << ",Hill Climbing," << saved_hc << "," << duration_hc << "\n";
     std::cout << " Done. (Saved: " << saved_hc << ", Time: " << duration_hc << "ms)\n";
 
+    // --- Page Rank ---
+    std::cout << "  Running Page Rank..." << std::flush;
+    auto start_pg = std::chrono::high_resolution_clock::now();
+    std::vector<int> vaccinated_pg = PageRank(g, k_budget, infected_nodes, 0.85, 1e-3);
+    auto end_pg = std::chrono::high_resolution_clock::now();
+    long long duration_pg = std::chrono::duration_cast<std::chrono::milliseconds>(end_pg - start_pg).count();
+    int saved_pg = evaluate_solution(g, vaccinated_pg, infected_nodes, evaluator);
+    results_file << actual_num_nodes << "," << k_percent << "," << infected_percent << ",Page Rank," << saved_pg << "," << duration_pg << "\n";
+    std::cout << " Done. (Saved: " << saved_pg << ", Time: " << duration_pg << "ms)\n";
+
     return vaccinated_hc;
 }

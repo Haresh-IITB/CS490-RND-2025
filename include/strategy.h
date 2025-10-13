@@ -29,4 +29,11 @@ std::vector<int> hill_climbing(Graph & G,
     std::vector<int> intitalVaccinatedNodes,
     int max_iter = 100);
 
+std::vector<int> PageRank(Graph & G, 
+    const int & K, 
+    const std::vector<int> & InfectedNodes, 
+    const double & alpha, 
+    const double & tolerance,
+    int max_iter = 100) ; 
+
 #endif
