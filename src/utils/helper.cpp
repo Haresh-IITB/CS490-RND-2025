@@ -9,7 +9,7 @@ int evaluate_solution(
     const std::vector<int>& infected_nodes,
     std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int>&)> evaluator)
 {
-    std::vector<bool> is_vaccinable(g.V, true);
+    std::vector<bool> is_vaccinable(g.nodes.size(), true);
     for (int node : infected_nodes) {
         is_vaccinable[node] = false;
     }
@@ -30,7 +30,7 @@ std::vector<int> run_single_experiment(
     std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int>&)> evaluator,
     std::ofstream& results_file)
 {
-    int actual_num_nodes = g.V;
+    int actual_num_nodes = g.nodes.size();
 
     // --- Greedy ---
     std::cout << "  Running Greedy..." << std::flush;

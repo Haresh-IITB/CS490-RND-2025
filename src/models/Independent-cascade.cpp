@@ -1,45 +1,119 @@
+// IndependentCascade.cpp
+// dynamic Independent Cascade on a COPY of the Graph:
+// at each timestep:
+//   1) infected frontier attempts to infect neighbors (one-shot per neighbor)
+//   2) graph moves nodes (simulate_movement(1)) and rewires edges
+// repeats until no new infections
+
 #include "waxman-graph.h"
-#include<vector> 
-#include<queue> 
+#include "Random_number_generator.h"
+#include <vector>
+#include <queue>
+#include <unordered_set>
+#include <algorithm>
 
-int IC_Simulation (Graph & G, std::vector<bool> & isVaccinable, const int & newVaccinatedNode, const std::vector<int> & infected_nodes){
-    Random_number_generator rng ; 
+// Infection probability per attempted edge 
+const double INFECTION_P = 0.05;
 
-    // Vacciante the new vaccinatedNode 
-    if(newVaccinatedNode != -1)
-        isVaccinable[newVaccinatedNode] = 0 ; 
+// IC_Simulation signature matches your earlier usage:
+// returns number of SAVED nodes (V - infectedCount)
+int IC_Simulation(Graph &G,
+                  std::vector<bool> &isVaccinable,           // original vaccinable flags (NOT modified)
+                  const int &newVaccinatedNode,              // -1 if none, otherwise node index to temporarily vaccinate
+                  const std::vector<int> &infected_nodes)   // initial infected set (indices)
+{
 
-    std::vector<bool> isInfectable(G.V,1) ;
-    for(int v  = 0 ; v < isVaccinable.size() ; ++v)
-        if (!isVaccinable[v]) 
-            isInfectable[v] = 0 ;
+    // Construct new graph with same Params
+    Graph::Params params_copy = G.params;
+    Graph Gc(params_copy, 1337);
 
-    std::queue<int> q ; 
-    int InfectedNodesCnt = infected_nodes.size() ; 
+    // copy structural data
+    Gc.centers = G.centers;
+    Gc.nodes = G.nodes;
+    Gc.adj_list = G.adj_list;
 
-    // Initialise the queue
-    for(int i : infected_nodes)
-        q.push(i) ; 
+    // rebuild spatial index for the copied nodes 
+    Gc.build_spatial_index();
 
-    while(!q.empty()){
-        int u = q.front() ; q.pop() ; 
+    // --- Prepare vaccination / infectable maps (do NOT change original isVaccinable) ---
+    const int N = (int)Gc.nodes.size();
+    std::vector<char> isInfectable(N, 1); // char for compactness
 
-        for(int v = 0 ; v<G.V ; ++v){
-            if(G.adj_matrix[u][v] > 0 || !isInfectable[v])
-                continue  ; 
-            int isInfected = rng.get_bernoulli(G.prob_edge[u][v]) ;  
-            if(isInfected){
-                q.push(v) ; 
-                isInfectable[v] = 0 ; 
-                InfectedNodesCnt ++ ; 
-            }
+    // start by marking non-infectable all nodes that are not vaccinable (i.e., already vaccinated)
+    for (int i = 0; i < (int)isVaccinable.size() && i < N; ++i) {
+        if (!isVaccinable[i]) isInfectable[i] = 0;
+    }
+    // apply the candidate vaccination (temporary)
+    if (newVaccinatedNode != -1 && newVaccinatedNode >= 0 && newVaccinatedNode < N) {
+        isInfectable[newVaccinatedNode] = 0;
+    }
+
+    // --- Initialize RNG for infection draws (independent from Graph internals) ---
+    Random_number_generator rng;
+
+    // --- Initialize infection state ---
+    std::vector<char> infected(N, 0); // who has ever been infected
+    std::queue<int> frontier;         // nodes that will attempt infection this timestep
+
+    // Seed initial infected nodes (but skip those that are vaccinated)
+    int infectedCount = 0;
+    for (int u : infected_nodes) {
+        if (u < 0 || u >= N) continue;
+        if (!isInfectable[u]) continue; // vaccinated -> cannot be infected
+        if (!infected[u]) {
+            infected[u] = 1;
+            frontier.push(u);
+            infectedCount++;
         }
     }
 
-    // Reverse vaccination  
-    if(newVaccinatedNode != -1)
-        isVaccinable[newVaccinatedNode] = 1 ; 
+    // If nothing is initially infected (or all vaccinated), return saved = N - 0 = N
+    if (frontier.empty()) {
+        return N - infectedCount;
+    }
 
-    return G.V - InfectedNodesCnt ; 
+
+    // Each iteration: current frontier attempts infections; then we move nodes/rewire; new infections form next frontier
+    while (!frontier.empty()) {
+        std::queue<int> next_frontier;
+
+        // Process each active infector u
+        while (!frontier.empty()) {
+            int u = frontier.front();
+            frontier.pop();
+
+            // iterate over neighbors in the copied graph's adjacency list
+            // note: adj_list[u] contains neighbor ids
+            for (int v : Gc.adj_list[u]) {
+                if (v < 0 || v >= N) continue;
+                if (!isInfectable[v]) continue;   // vaccinated / not infectable
+                if (infected[v]) continue;       // already infected earlier
+
+                // attempt infection with probability INFECTION_P
+                int succ = rng.get_bernoulli(INFECTION_P);
+                if (succ) {
+                    infected[v] = 1;
+                    next_frontier.push(v);
+                    infectedCount++;
+                }
+            }
+        } 
+
+        // After infection attempts at this timestep, perform movement + rewiring
+        // This models edge changes between timesteps (dynamic graph) ** TUNABLE Parameter** , so you can adjust movement frequency
+        if (next_frontier.empty()) {
+            // no new infections; still could move nodes but since no future infections will occur, we can break early
+            break;
+        } else {
+            // Move nodes by one step (this updates positions and adjacency via your Graph implementation)
+            Gc.simulate_movement(1);
+
+            // Now use next_frontier as frontier for next iteration
+            frontier = std::move(next_frontier);
+        }
+    } // while frontier
+
+    // Compute saved nodes (those not infected)
+    int saved = N - infectedCount;
+    return saved;
 }
-    

@@ -1,67 +1,73 @@
-/*
-The file aims to generate a waxmam - graph of n nodes 
---> The graph generated is geometrically aware, we also make centers to make the graph
---> Simulation of city helps to simulate real-life cities 
-*/
+#ifndef WAXMANGRAPH_H
+#define WAXMANGRAPH_H
 
-#ifndef WAXMAN_GRAPH_H
-#define WAXMAN_GRAPH_H
+#include <vector>
+#include <unordered_set>
+#include <cstdint> // for uint64_t
+#include "Random_number_generator.h" 
+#include "SpatialGrid.h"
 
-#include<iostream> 
-#include<vector> 
-#include<algorithm>
-#include<utility>
-#include<fstream>
-#include "Random_number_generator.h"
-#include "distance.h"
+static const int TIER_VILLAGE = 0;
+static const int TIER_TIER3   = 1;
+static const int TIER_TIER2   = 2;
+static const int TIER_TIER1   = 3;
 
-class Graph{
+struct Center {
+    double x, y;
+    int tier;
+    int id;
+};
 
-public : 
-    int V ; 
-    int num_cities ; 
-    std::vector<std::pair<double,double>> cities ; 
-    std::vector<std::pair<double,double>> nodes_pos ;  
-    std::vector<std::vector<int>> adj_matrix ; // Using adj-matrix because has to deal with 
-                                               // Insertion, deletion and no - changes  
-                                               
-    std::vector<std::vector<double>> prob_edge ; 
-    // Updating probabilities  
-    // Use the prob_edge for updation, if the result same as prev -> No change 
-    //                                 else -> Change 
-    std::vector<double> nodesThreshold ; // Used in the linear threshold model 
-    
-private :
-    std::vector<std::vector<double>> pw_dist ; // Pair-wise distance 
-    
+struct Node {
+    int id;
+    double x, y;
+    int tier;
+    int cluster_id;
+};
 
-public : 
-    Graph() = default ; 
-    Graph(int n) ; 
-    Graph(int n, int k) ;
-    
-    /*
-    This methods add edges to the graph based on the waxman-formulation
-    --> Assumption : that the nodes are distributed in a [0,0] to [1,1] rectangle and have k centers 
-    */
 
-    void normalize_distance() ;
+class Graph {
+public:
 
-    std::vector<double> generate_cities() ; 
-    void generate_nodes() ; 
-    void generate_edges(const double & alpha, const double & beta) ; 
+    struct Params {
+        int num_t1, num_t2, num_t3, num_villages;
+        int nodes_per_t1, nodes_per_t2, nodes_per_t3, nodes_per_village;
+        double alpha, beta, cutoff_prob;
+        double world_min_x = 0.0, world_min_y = 0.0, world_max_x = 1.0, world_max_y = 1.0;
+        double grid_cell_size = 0.02;
+    };
 
-    // Helps to visualise the graph 
-    void graph_info() ;
-    void save_nodes_to_file(const std::string &node_file,const std::string &edge_file) ; 
+    Params params;
+    std::vector<Center> centers;
+    std::vector<Node> nodes;
+    std::vector<std::unordered_set<int>> adj_list;
+    std::vector<double> nodesThreshold;
 
-private : 
-    // Dynamically changes the graph after a each step 
-    void edge_toss() ; 
+    SpatialGrid *grid = nullptr;
 
-public :
-    void update_graph() ; 
-    
+    Random_number_generator *rng_gen;
+
+    double cutoff_radius;
+
+    Graph(const Params &p, uint64_t seed);
+    ~Graph();
+    void generate_centers();
+    void generate_nodes();
+    void build_spatial_index();
+    void generate_edges();
+
+    double distance_sq(double x1, double y1, double x2, double y2) const;
+    double distance(double x1, double y1, double x2, double y2) const;
+
+    double tier_move_prob(int t) const;
+    int pick_target_cluster_weighted(int node_id);
+
+    void remove_edges_of(int u);
+    void create_edges_for(int u);
+    void move_node(int u, double newx, double newy, int newtier, int new_cluster_id);
+    void simulate_movement(int num_steps);
+
+    void print_summary() const;
 };
 
 #endif

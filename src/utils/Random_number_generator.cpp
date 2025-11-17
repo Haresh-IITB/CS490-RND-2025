@@ -1,9 +1,15 @@
 #include "Random_number_generator.h"
 
+// Default constructor (seeds from time)
 Random_number_generator :: Random_number_generator(){
     uint64_t timeSeed = std::chrono::high_resolution_clock::now().time_since_epoch().count(); // seed 
     std::seed_seq ss{uint32_t(timeSeed & 0xffffffff), uint32_t(timeSeed>>32)};
     rng.seed(ss) ;         
+}
+
+// Constructor that takes a specific seed
+Random_number_generator :: Random_number_generator(uint64_t seed){
+    rng.seed(seed);
 }
 
 double Random_number_generator :: get_unif(){
@@ -17,6 +23,7 @@ double Random_number_generator :: get_unif(const double & a, const double & b){
 }
 
 double Random_number_generator :: get_normal(const double & mean, const double & variance){
+    // std::normal_distribution takes mean and stddev
     std::normal_distribution<double> gauss(mean,sqrt(variance)) ; 
     return gauss(rng) ; 
 }
@@ -35,3 +42,5 @@ int Random_number_generator :: get_bernoulli(const double & p){
     std::bernoulli_distribution b(p) ; 
     return b(rng) ; 
 }
+
+// Removed the extra closing brace that was in the original file

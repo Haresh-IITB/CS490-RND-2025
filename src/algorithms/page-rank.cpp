@@ -6,13 +6,13 @@ std::vector<double> iter_pg(const Graph & G,
     const std::vector<double> & pageVal,
     const double & alpha)
 {    
-    std::vector<double> newPageVal(G.V) ; 
+    std::vector<double> newPageVal(G.nodes.size()) ; 
 
-    for(int i = 0 ; i<G.V ; i++){
+    for(int i = 0 ; i<G.nodes.size() ; i++){
         double inPageSum = 0.0 ; 
         int inDegCnt = 0 ; 
-        for(int j = 0 ; j<G.V ; j++){
-            if(G.adj_matrix[i][j] <= 0) continue ; 
+        for(int j = 0 ; j<G.nodes.size() ; j++){
+            if(G.adj_list[j].count(i) == 0) continue ;
             inPageSum += pageVal[j] ; 
             inDegCnt ++ ;
         }
@@ -43,7 +43,7 @@ std::vector<int> PageRank(Graph & G,
     int max_iter = 100)
 {
     // Select the top-k Pages apart from the InfectedNodes
-    std::vector<double> pageVal(G.V,1.0) ; 
+    std::vector<double> pageVal(G.nodes.size(),1.0) ; 
     for(int iter = 0 ; iter < max_iter ; iter ++){
         std::vector<double> newPageVal = iter_pg(G, pageVal, alpha) ; 
         if(converged(newPageVal, pageVal, tolerance)){
@@ -54,7 +54,7 @@ std::vector<int> PageRank(Graph & G,
         }
     }
 
-    std::vector<int> nodes(G.V) ; 
+    std::vector<int> nodes(G.nodes.size()) ; 
     std::iota(nodes.begin(), nodes.end(), 0) ; 
     std::sort(nodes.begin(), nodes.end(), [&](const int & a, const int & b){
         return pageVal[a] > pageVal[b] ; 
@@ -66,7 +66,7 @@ std::vector<int> PageRank(Graph & G,
         InfectedNodesSet.insert(i) ; 
 
     std::vector<int> vaccinated ; 
-    for(int i = 0 ; i<G.V && vaccinated.size() < K ; i++){
+    for(int i = 0 ; i<G.nodes.size() && vaccinated.size() < K ; i++){
         if(InfectedNodesSet.count(nodes[i]) == 0)
             vaccinated.emplace_back(nodes[i]) ; 
     }

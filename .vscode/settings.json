@@ -49,6 +49,12 @@
         "algorithm": "cpp",
         "set": "cpp",
         "functional": "cpp",
-        "fstream": "cpp"
+        "fstream": "cpp",
+        "charconv": "cpp",
+        "forward_list": "cpp",
+        "iomanip": "cpp",
+        "__tree": "cpp",
+        "map": "cpp",
+        "unordered_set": "cpp"
     }
 }

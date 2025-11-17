@@ -1,90 +1,134 @@
+#include "Random_number_generator.h" 
 #include "waxman-graph.h"
-#include "Random_number_generator.h"
 #include <vector> 
 #include <functional> 
 #include <set> 
+#include <numeric>   
+#include <algorithm> 
+#include <iterator>  
+#include <iostream>  
 
 std::vector<int> Local_search(Graph & G, 
     const int & K, 
     const std::vector<int> & InfectedNodes, 
     std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int> &)> evaluator,
-    int max_iter = 15)
+    int max_iter)
 {
-    // Randomly generate a set of vaccianted nodes 
-    Random_number_generator rng ; 
-    std::vector<int> v(G.V) ; 
-    std::iota(v.begin(),v.end(),0) ; 
-    std::shuffle(v.begin(),v.end(),rng.rng) ; 
-    v.resize(K) ; 
-
-    // Initialisation of vectors and sets 
-    std::set<int> S ; // set of vacinnated nodes 
-    std::vector<bool> isVaccinable(G.V,1) ; 
+    int num_nodes = G.nodes.size(); 
     
+    // Create a random initial set S of K nodes ---
+
+    // Get a vector of all node IDs
+    std::vector<int> v(num_nodes); 
+    std::iota(v.begin(), v.end(), 0); 
+
+    // Shuffle using the graph's main RNG
+    std::shuffle(v.begin(), v.end(), G.rng_gen->rng); 
+
+    std::set<int> S ; // set of vacinnated nodes 
+    std::vector<bool> isVaccinable(num_nodes, true); 
+    
+    // Mark infected nodes as not vaccinable
     for(int i : InfectedNodes)
-        isVaccinable[i] = 0 ; 
-    for(int elem : v){
-        isVaccinable[elem] = 0 ; 
-        S.insert(elem) ; 
+        isVaccinable[i] = false; 
+
+    // Populate initial set S, ensuring no infected nodes are chosen
+    int added = 0;
+    for (int node_id : v) {
+        if (added >= K) break;
+        if (isVaccinable[node_id]) { // if not infected
+            S.insert(node_id);
+            isVaccinable[node_id] = false; // Now it's not "vaccinable" (it's already vaccinated)
+            added++;
+        }
     }
 
-    // Local Search for another vaccinable node 
-    bool convereged = false ; 
-    int iterCnt = 0 ; 
+    std::cout << "  LS: Starting with random set of " << S.size() << " nodes." << std::endl;
 
-    while (!convereged && iterCnt < max_iter){
-        convereged = true ; // Assume convereged 
-        int currSavedCnt = evaluator(G,isVaccinable,-1,InfectedNodes) ; 
+    // ---  Run Local Search ---
+    bool converged = false; 
+    int iterCnt = 0; 
 
+    while (!converged && iterCnt < max_iter){
+        converged = true; // Assume convereged 
         
-        std::set<int> temp  = S ; 
-        std::vector<bool> Considerable(G.V,1) ; // This helps to mark that if a node is already swapped by v then it most not be again swapped by v'
-        
-        std::vector<int> ReplacedNodes ; 
-        std::vector<int> ReplacingNodes ;
+        // Get the score for the *start* of this iteration
+        int currSavedCnt = evaluator(G, isVaccinable, -1, InfectedNodes); 
+        std::cout << "  LS iter " << (iterCnt+1) << ": Starting score " << currSavedCnt << std::endl;
 
-        for(int u : S){
-            isVaccinable[u] = 1 ; // Un-Vaccinate u
+        std::set<int> temp_S = S; // A temporary set to hold swaps for this iteration
+        std::vector<bool> Considerable(num_nodes, true); 
 
-            int bestSavedCnt = currSavedCnt ; // Bare minimum you want this 
-            int bestSavedIdx = -1 ; 
+        std::vector<int> ReplacedNodes; 
+        std::vector<int> ReplacingNodes;
+
+        // Create a copy to iterate over, as S (via temp_S) will be modified
+        std::vector<int> s_copy(S.begin(), S.end());
+
+        for(int u : s_copy){ // For each node 'u' in the vaccinated set
             
-            for(int v = 0 ; v<G.V ; v++){
-                if(!isVaccinable[v] || G.adj_matrix[u][v] == 0 || !Considerable[v]) 
-                    continue ; 
-                int SavedCntV = evaluator(G,isVaccinable,v,InfectedNodes) ; 
+            // Check if u was already swapped out in this iteration
+            if (temp_S.find(u) == temp_S.end()) {
+                continue;
+            }
+
+            isVaccinable[u] = true; // Temporarily un-vaccinate u
+
+            int bestSavedCnt = -1; // Find the best swap *for this u*
+            int bestSavedIdx = -1; 
+            
+            //  Local Search only swaps with *neighbors*
+            for(int v : G.adj_list[u]){ 
+                // if v is available, and hasn't been used in a swap this iter
+                if(!isVaccinable[v] || !Considerable[v]) 
+                    continue; 
+                
+                // Score for the set (S - {u}) + {v}
+                int SavedCntV = evaluator(G, isVaccinable, v, InfectedNodes); 
                 if(SavedCntV > bestSavedCnt){
-                    bestSavedCnt = SavedCntV ; 
-                    bestSavedIdx = v ; 
+                    bestSavedCnt = SavedCntV; 
+                    bestSavedIdx = v; 
                 }
             }
 
-            isVaccinable[u] = 0 ; // Re-vaccinate this 
+            isVaccinable[u] = false; // Re-vaccinate u
             
-            if(bestSavedIdx != -1){
-                convereged = false ; 
-                temp.erase(u) ; 
-                temp.insert(bestSavedIdx) ; 
-                ReplacedNodes.push_back(u) ; 
-                ReplacingNodes.push_back(bestSavedIdx) ; 
-                Considerable[bestSavedIdx] = 0 ; 
+            // If we found a swap that's better than the iteration's start score
+            if(bestSavedIdx != -1 && bestSavedCnt > currSavedCnt){
+                std::cout << "    LS Swap found: " << u << " (out) for " 
+                          << bestSavedIdx << " (in). New score: " << bestSavedCnt << std::endl;
+                
+                converged = false; // We made a change, so we are not converged
+                temp_S.erase(u); 
+                temp_S.insert(bestSavedIdx); 
+                
+                ReplacedNodes.push_back(u); 
+                ReplacingNodes.push_back(bestSavedIdx); 
+                Considerable[bestSavedIdx] = false; // Don't swap this new node *in this iteration*
+                
+                currSavedCnt = bestSavedCnt; 
             }
         }
 
-        S = temp ; 
-        // Fix the isVaccinable vector 
+        S = temp_S; // Commit all changes from this iteration
+        // Fix the isVaccinable vector
         for(int i : ReplacedNodes)
-            isVaccinable[i] = 1 ; 
+            isVaccinable[i] = true; 
         for(int i : ReplacingNodes)
-            isVaccinable[i] = 0 ; 
+            isVaccinable[i] = false; 
 
-        iterCnt ++ ; 
+        iterCnt++; 
     }
 
+    if (converged && iterCnt > 0) {
+        std::cout << "  Local search converged after " << iterCnt << " iterations." << std::endl;
+    } else if (iterCnt == max_iter) {
+        std::cout << "  Local search stopped at max_iter " << max_iter << "." << std::endl;
+    }
 
-    std::vector<int> result ; 
+    std::vector<int> result; 
     for(int elem : S)
-        result.push_back(elem) ; 
+        result.push_back(elem); 
 
-    return result ; 
-}   
+    return result; 
+}
