@@ -1,7 +1,0 @@
-Graph summary: V=340 centers=30
-Edges (undirected counted twice)=2938, unique edges ~1469
-Total nodes = 340
-Initial infected count = 3
-Vaccination budget K = 17
-===== Running model: IC =====
-Greedy step 1/17: Vaccinated node 49 (Saved 211 more nodes)
