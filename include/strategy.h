@@ -20,20 +20,20 @@ std::vector<int> Local_search(Graph & G,
     const int & K, 
     const std::vector<int> & InfectedNodes, 
     std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int> &)> evaluator,
-    int max_iter = 100000) ;
+    int max_iter = 50) ;
 
 std::vector<int> hill_climbing(Graph & G, 
     const int & K, 
     const std::vector<int> & InfectedNodes, 
     std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int> &)> evaluator,
     std::vector<int> intitalVaccinatedNodes,
-    int max_iter = 100);
+    int max_iter = 50);
 
 std::vector<int> PageRank(Graph & G, 
     const int & K, 
     const std::vector<int> & InfectedNodes, 
     const double & alpha, 
     const double & tolerance,
-    int max_iter = 100) ; 
+    int max_iter = 50) ; 
 
 #endif
