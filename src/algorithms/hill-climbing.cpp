@@ -5,6 +5,7 @@
 #include <iostream> 
 
 std::vector<int> hill_climbing(Graph & G, 
+    const int & K,
     const std::vector<int> & InfectedNodes, 
     std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int> &)> evaluator,
     std::vector<int> initialVaccinatedNodes, 
@@ -18,8 +19,8 @@ std::vector<int> hill_climbing(Graph & G,
     // isVaccinable means "is available to be chosen as a replacement"
     std::vector<bool> isVaccinable(num_nodes, true); 
     
-    for(int i : InfectedNodes)
-        isVaccinable[i] = false; 
+    // for(int i : InfectedNodes)
+    //     isVaccinable[i] = false; 
     for(int elem : S){
         isVaccinable[elem] = false; 
     }

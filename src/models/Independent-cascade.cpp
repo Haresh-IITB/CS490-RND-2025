@@ -11,6 +11,7 @@
 #include <queue>
 #include <unordered_set>
 #include <algorithm>
+#include <iostream>
 
 // Infection probability per attempted edge 
 const double INFECTION_P = 0.05;
@@ -37,22 +38,23 @@ int IC_Simulation(Graph &G,
 
     // --- Prepare vaccination / infectable maps (do NOT change original isVaccinable) ---
     const int N = (int)Gc.nodes.size();
-    std::vector<char> isInfectable(N, 1); // char for compactness
+    std::vector<int> isInfectable(N, 1); // int for compactness
 
     // start by marking non-infectable all nodes that are not vaccinable (i.e., already vaccinated)
-    for (int i = 0; i < (int)isVaccinable.size() && i < N; ++i) {
+    for (int i = 0; i < isVaccinable.size() && i < N; ++i) {
         if (!isVaccinable[i]) isInfectable[i] = 0;
     }
+
     // apply the candidate vaccination (temporary)
     if (newVaccinatedNode != -1 && newVaccinatedNode >= 0 && newVaccinatedNode < N) {
         isInfectable[newVaccinatedNode] = 0;
     }
 
     // --- Initialize RNG for infection draws (independent from Graph internals) ---
-    Random_number_generator rng;
+    Random_number_generator rng(1337);
 
     // --- Initialize infection state ---
-    std::vector<char> infected(N, 0); // who has ever been infected
+    std::vector<int> infected(N, 0); // who has ever been infected
     std::queue<int> frontier;         // nodes that will attempt infection this timestep
 
     // Seed initial infected nodes (but skip those that are vaccinated)
@@ -66,6 +68,8 @@ int IC_Simulation(Graph &G,
             infectedCount++;
         }
     }
+
+    // std::cout << "Initial infected count in IC_Simulation: " << infectedCount << "\n";
 
     // If nothing is initially infected (or all vaccinated), return saved = N - 0 = N
     if (frontier.empty()) {

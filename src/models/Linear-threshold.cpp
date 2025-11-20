@@ -11,6 +11,7 @@
 #include <vector>
 #include <queue>
 #include <cmath>
+#include <iostream>
 
 // LT_Simulation:
 // returns number of saved nodes = V - infected_count
@@ -26,13 +27,14 @@ int LT_Simulation(Graph &G,
     Gc.centers = G.centers;
     Gc.nodes   = G.nodes;
     Gc.adj_list = G.adj_list;
+    Gc.nodesThreshold = G.nodesThreshold;
     Gc.build_spatial_index();
 
     const int N = Gc.nodes.size();
 
 
     // 2) Build infectability mask
-    std::vector<char> infectable(N, 1);   // 1 = can be infected
+    std::vector<int> infectable(N, 1);   // 1 = can be infected
     for (int i = 0; i < (int)isVaccinable.size() && i < N; i++) {
         if (!isVaccinable[i])
             infectable[i] = 0;
@@ -42,7 +44,7 @@ int LT_Simulation(Graph &G,
 
     // 3) Initialize LT influence scores + infection state
     std::vector<double> influence(N, 0.0);
-    std::vector<char> infected(N, 0);
+    std::vector<int> infected(N, 0);
 
     std::queue<int> frontier;
 
@@ -54,6 +56,8 @@ int LT_Simulation(Graph &G,
         frontier.push(u);
         infectedCount++;
     }
+
+    // std::cout << "Initial infected count in LT_Simulation: " << infectedCount << "\n";
 
     if (frontier.empty()) {
         return N - infectedCount;  // nothing to infect
@@ -74,10 +78,10 @@ int LT_Simulation(Graph &G,
                 if (infected[v]) continue;      // already active
 
                 // weight = Waxman probability p(u,v)
-                double w = G.params.alpha * std::exp(
+                double w = Gc.params.alpha * std::exp(
                     -Gc.distance(Gc.nodes[u].x, Gc.nodes[u].y, 
                                  Gc.nodes[v].x, Gc.nodes[v].y) / 
-                      G.params.beta
+                      Gc.params.beta
                 );
 
                 influence[v] += w;

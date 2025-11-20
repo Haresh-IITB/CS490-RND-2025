@@ -7,7 +7,7 @@
 #include<set> 
 #include<queue> 
 
-int ltSimulation (Graph & G, std::vector<bool> & isVaccinable, const int & newVaccinatedNode, const std::vector<int> & infected_nodes) ; 
+int LT_Simulation (Graph & G, std::vector<bool> & isVaccinable, const int & newVaccinatedNode, const std::vector<int> & infected_nodes) ; 
 int IC_Simulation (Graph & G, std::vector<bool> & isVaccinable, const int & newVaccinatedNode, const std::vector<int> & infected_nodes) ; 
 
 #endif

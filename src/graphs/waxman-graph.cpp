@@ -259,47 +259,48 @@ void Graph::simulate_movement(int num_steps) {
 }
 
 
-int main() {
-    Graph::Params p;
-    p.num_t1 = 2; p.num_t2 = 4; p.num_t3 = 6; p.num_villages = 4;
-    p.nodes_per_t1 = 200; p.nodes_per_t2 = 10; p.nodes_per_t3 = 4; p.nodes_per_village = 2;
-    p.alpha = 0.4; p.beta = 0.1; p.cutoff_prob = 1e-3; p.grid_cell_size = 0.02;
+// Main function for testing
+// int main() {
+//     Graph::Params p;
+//     p.num_t1 = 2; p.num_t2 = 4; p.num_t3 = 6; p.num_villages = 4;
+//     p.nodes_per_t1 = 200; p.nodes_per_t2 = 10; p.nodes_per_t3 = 4; p.nodes_per_village = 2;
+//     p.alpha = 0.4; p.beta = 0.1; p.cutoff_prob = 1e-3; p.grid_cell_size = 0.02;
 
-    const int num_steps = 100;
-    const std::string out_dir = "snapshots";
+//     const int num_steps = 100;
+//     const std::string out_dir = "snapshots";
 
-    Graph g(p, 2025);
-    g.generate_centers();
-    g.generate_nodes();
-    g.build_spatial_index();
-    g.generate_edges();
-    g.print_summary();
+//     Graph g(p, 2025);
+//     g.generate_centers();
+//     g.generate_nodes();
+//     g.build_spatial_index();
+//     g.generate_edges();
+//     g.print_summary();
 
-    std::error_code ec;
-    std::filesystem::create_directories(out_dir, ec);
-    if (ec) { std::cerr << "Failed to create output directory: " << ec.message() << '\n'; return 1; }
+//     std::error_code ec;
+//     std::filesystem::create_directories(out_dir, ec);
+//     if (ec) { std::cerr << "Failed to create output directory: " << ec.message() << '\n'; return 1; }
 
-    auto dump_frame = [&](int step) {
-        char node_filename[256]; char edge_filename[256];
-        std::snprintf(node_filename, sizeof(node_filename), "%s/snapshot_%04d_nodes.csv", out_dir.c_str(), step);
-        std::snprintf(edge_filename, sizeof(edge_filename), "%s/snapshot_%04d_edges.csv", out_dir.c_str(), step);
-        std::ofstream nf(node_filename);
-        nf << "id,x,y,tier,cluster\n";
-        for (const auto &n : g.nodes) nf << n.id << "," << n.x << "," << n.y << "," << n.tier << "," << n.cluster_id << '\n';
-        nf.close();
-        std::ofstream ef(edge_filename);
-        ef << "u,v\n";
-        for (int u = 0; u < (int)g.adj_list.size(); ++u) for (int v : g.adj_list[u]) if (u < v) ef << u << "," << v << '\n';
-        ef.close();
-    };
+//     auto dump_frame = [&](int step) {
+//         char node_filename[256]; char edge_filename[256];
+//         std::snprintf(node_filename, sizeof(node_filename), "%s/snapshot_%04d_nodes.csv", out_dir.c_str(), step);
+//         std::snprintf(edge_filename, sizeof(edge_filename), "%s/snapshot_%04d_edges.csv", out_dir.c_str(), step);
+//         std::ofstream nf(node_filename);
+//         nf << "id,x,y,tier,cluster\n";
+//         for (const auto &n : g.nodes) nf << n.id << "," << n.x << "," << n.y << "," << n.tier << "," << n.cluster_id << '\n';
+//         nf.close();
+//         std::ofstream ef(edge_filename);
+//         ef << "u,v\n";
+//         for (int u = 0; u < (int)g.adj_list.size(); ++u) for (int v : g.adj_list[u]) if (u < v) ef << u << "," << v << '\n';
+//         ef.close();
+//     };
 
-    dump_frame(0);
-    for (int step = 1; step <= num_steps; ++step) {
-        g.simulate_movement(1);
-        dump_frame(step);
-        if (step % 10 == 0) std::cout << "Completed step " << step << "\n";
-    }
-    g.print_summary();
-    std::cout << "Snapshots written to " << out_dir << " frames 0.." << num_steps << "\n";
-    return 0;
-}
+//     dump_frame(0);
+//     for (int step = 1; step <= num_steps; ++step) {
+//         g.simulate_movement(1);
+//         dump_frame(step);
+//         if (step % 10 == 0) std::cout << "Completed step " << step << "\n";
+//     }
+//     g.print_summary();
+//     std::cout << "Snapshots written to " << out_dir << " frames 0.." << num_steps << "\n";
+//     return 0;
+// }

@@ -29,8 +29,8 @@ std::vector<int> Local_search(Graph & G,
     std::vector<bool> isVaccinable(num_nodes, true); 
     
     // Mark infected nodes as not vaccinable
-    for(int i : InfectedNodes)
-        isVaccinable[i] = false; 
+    // for(int i : InfectedNodes)
+    //     isVaccinable[i] = false; 
 
     // Populate initial set S, ensuring no infected nodes are chosen
     int added = 0;

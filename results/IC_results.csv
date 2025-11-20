@@ -1,0 +1,5 @@
+strategy,saved
+greedy,332
+local_search,325
+hill_climbing,340
+pagerank,324
