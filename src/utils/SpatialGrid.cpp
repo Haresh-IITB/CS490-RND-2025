@@ -2,6 +2,10 @@
 #include <cmath>
 #include <algorithm> // For max and min 
 
+// Possible Improvements : 
+// 1. Use unorded_set instead of vector for efficient insetion and removal as opposed to vector 
+// 2. Instead of query radius returning a new vector it returns the vector of neigh index -> avoiding expensive copies 
+
 SpatialGrid::SpatialGrid(double world_min_x_, double world_min_y_,
                          double world_max_x_, double world_max_y_,
                          double cell_size_)

@@ -6,7 +6,10 @@
 #include <filesystem>
 #include <system_error>
 
-
+// 1. Reduce attempts limit 
+// 2. Make the min distance while placing a parameter (dynamic)
+// 3. Make variance of the t1, t2, and t3 citites a dynamic parameter, Use non-normal distribution 
+// 4. The center picked is prop to the tier bias ** -> HYPERPARAMETER
 Graph::Graph(const Params &p, uint64_t seed)
     : params(p) {
     
@@ -138,10 +141,9 @@ void Graph::build_spatial_index() {
 
 void Graph::generate_edges() {
     for (const auto &u : nodes) {
-        auto candidates = grid->query_radius(u.x, u.y, cutoff_radius);
+        auto candidates = grid->query_radius(u.x, u.y, cutoff_radius); // Costly operation 
         for (int vid : candidates) {
-            if (vid == u.id) continue;
-            if (vid < u.id) continue; // process each pair once
+            if (vid <= u.id) continue; // process each pair once
             const Node &v = nodes[vid];
             double d = distance(u.x, u.y, v.x, v.y);
             double p = params.alpha * std::exp(-d / params.beta);
@@ -167,6 +169,8 @@ void Graph::print_summary() const {
 }
 
 // movement
+// This denotes the probability that a person from a specific tier decides to moves 
+// That is Village person has a probability of 0.10 to move from village 
 double Graph::tier_move_prob(int t) const {
     switch (t) {
         case TIER_VILLAGE: return 0.10;
@@ -176,6 +180,9 @@ double Graph::tier_move_prob(int t) const {
     }
 }
 
+// Now pick a center at random for the movement
+// The center picked is prop to 1/dist 
+// The center picked is prop to the tier bias ** -> HYPERPARAMETER
 int Graph::pick_target_cluster_weighted(int node_id) {
     const Node &u = nodes[node_id];
     std::vector<double> weights; weights.reserve(centers.size());
