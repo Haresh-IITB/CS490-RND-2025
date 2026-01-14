@@ -19,6 +19,8 @@ struct Random_number_generator {
 
     double get_unif() ; 
     double get_unif(const double & a, const double & b) ; 
+    int get_int(const int & a, const int & b) ;
+    uint64_t get_uint64() ;
     
     double get_normal() ; 
     double get_normal(const double & mean, const double & variance) ; 

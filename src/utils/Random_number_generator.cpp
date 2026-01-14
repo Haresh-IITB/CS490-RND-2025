@@ -22,6 +22,16 @@ double Random_number_generator :: get_unif(const double & a, const double & b){
     return unif(rng) ; 
 }
 
+int Random_number_generator :: get_int(const int & a, const int & b){
+    std::uniform_int_distribution<int> unif(a,b) ; 
+    return unif(rng) ; 
+}
+
+uint64_t Random_number_generator :: get_uint64(){
+    std::uniform_int_distribution<uint64_t> unif(0,UINT64_MAX) ; 
+    return unif(rng) ; 
+}
+
 double Random_number_generator :: get_normal(const double & mean, const double & variance){
     // std::normal_distribution takes mean and stddev
     std::normal_distribution<double> gauss(mean,sqrt(variance)) ; 

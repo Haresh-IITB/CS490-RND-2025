@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <filesystem>
 #include <system_error>
@@ -10,6 +11,32 @@
 // 2. Make the min distance while placing a parameter (dynamic)
 // 3. Make variance of the t1, t2, and t3 citites a dynamic parameter, Use non-normal distribution 
 // 4. The center picked is prop to the tier bias ** -> HYPERPARAMETER
+
+#define DEBUG_MOVE 0
+
+Graph::Graph(Graph&& other) noexcept {
+    *this = std::move(other);
+}
+
+Graph& Graph::operator=(Graph&& other) noexcept {
+    if (this != &other) {
+        // steal resources
+        grid = other.grid;
+        rng_gen = other.rng_gen;
+
+        other.grid = nullptr;
+        other.rng_gen = nullptr;
+
+        centers = std::move(other.centers);
+        nodes = std::move(other.nodes);
+        adj_list = std::move(other.adj_list);
+        nodesThreshold = std::move(other.nodesThreshold);
+        params = other.params;
+        cutoff_radius = other.cutoff_radius;
+    }
+    return *this;
+}
+
 Graph::Graph(const Params &p, uint64_t seed)
     : params(p) {
     
@@ -30,108 +57,90 @@ Graph::~Graph() {
 
 void Graph::generate_centers() {
     centers.clear();
-    auto add_center = [&](double x, double y, int t){
-        Center c; c.x = x; c.y = y; c.tier = t; c.id = (int)centers.size(); centers.push_back(c);
+
+    auto add_center = [&](double x, double y, int tier) {
+        Center c;
+        c.x = x; c.y = y;
+        c.tier = tier;
+        c.id = (int)centers.size();
+        centers.push_back(c);
     };
 
-    // Tier‑1
-    int n1 = std::max(1, params.num_t1);
-    int cols = std::max(1, (int)std::ceil(std::sqrt((double)n1)));
-    int rows = std::max(1, (int)std::ceil((double)n1 / cols));
-    int placed = 0;
+    // -------- Cities (grid-based placement) --------
+    int n = std::max(1, params.num_cities);
+    int cols = std::ceil(std::sqrt(n));
+    int rows = std::ceil((double)n / cols);
 
     double cellw = (params.world_max_x - params.world_min_x) / cols;
     double cellh = (params.world_max_y - params.world_min_y) / rows;
 
-    for (int r = 0; r < rows && placed < n1; ++r) {
-        for (int c = 0; c < cols && placed < n1; ++c) {
+    int placed = 0;
+    for (int r = 0; r < rows && placed < n; ++r) {
+        for (int c = 0; c < cols && placed < n; ++c) {
             double cx = params.world_min_x + (c + 0.5) * cellw;
             double cy = params.world_min_y + (r + 0.5) * cellh;
 
-            // Use rng_gen->get_unif() which returns [0, 1]
-            double jitter_x = (rng_gen->get_unif() - 0.5) * 0.4 * cellw;
-            double jitter_y = (rng_gen->get_unif() - 0.5) * 0.4 * cellh;
+            double jx = (rng_gen->get_unif() - 0.5) * 0.3 * cellw;
+            double jy = (rng_gen->get_unif() - 0.5) * 0.3 * cellh;
 
-            add_center(std::clamp(cx + jitter_x, params.world_min_x, params.world_max_x),
-                       std::clamp(cy + jitter_y, params.world_min_y, params.world_max_y),
-                       TIER_TIER1);
+            add_center(
+                std::clamp(cx + jx, params.world_min_x, params.world_max_x),
+                std::clamp(cy + jy, params.world_min_y, params.world_max_y),
+                TIER_CITY
+            );
             placed++;
         }
     }
 
-    // random placement
-    auto place_random_with_spacing = [&](int count, double min_dist, int tier) {
-        int attempts_limit = 2000;
-        while (count > 0 && attempts_limit-- > 0) {
-            // Use rng_gen->get_unif() which returns [0, 1]
-            double x = rng_gen->get_unif();
-            double y = rng_gen->get_unif();
-
-            bool ok = true;
-            for (const auto &c : centers) {
-                double dx = x - c.x, dy = y - c.y;
-                if (std::sqrt(dx*dx + dy*dy) < min_dist) { ok = false; break; }
-            }
-            if (!ok) continue;
-
-            add_center(x, y, tier);
-            count--;
-        }
-    };
-
-    // -----------------------------
-    // Tier‑2: random with 0.12 spacing
-    // -----------------------------
-    place_random_with_spacing(params.num_t2, 0.12, TIER_TIER2);
-
-    // -----------------------------
-    // Tier‑3: random with 0.06 spacing
-    // -----------------------------
-    place_random_with_spacing(params.num_t3, 0.06, TIER_TIER3);
-
-    // -----------------------------
-    // Villages: uniform random (no spacing constraint)
-    // -----------------------------
+    // -------- Villages (uniform random) --------
     for (int i = 0; i < params.num_villages; ++i) {
-        // Use rng_gen->get_unif() which returns [0, 1]
-        double x = rng_gen->get_unif();
-        double y = rng_gen->get_unif();
-        add_center(x, y, TIER_VILLAGE);
+        add_center(
+            rng_gen->get_unif(),
+            rng_gen->get_unif(),
+            TIER_VILLAGE
+        );
     }
 }
 
 
 void Graph::generate_nodes() {
     nodes.clear();
+    nodesThreshold.clear();
     int id_counter = 0;
-    auto add_cluster_nodes = [&](int count, const Center &c, double spread){
-        double variance = spread * spread; 
+
+    auto add_cluster_nodes = [&](int count, const Center &c, double spread) {
+        double var = spread * spread;
         for (int i = 0; i < count; ++i) {
-            Node n; n.id = id_counter++; 
-            // Use rng_gen->get_normal()
-            n.x = rng_gen->get_normal(c.x, variance);
-            n.y = rng_gen->get_normal(c.y, variance);
-            n.tier = c.tier; n.cluster_id = c.id;
+            Node n;
+            n.id = id_counter++;
+            n.x = rng_gen->get_normal(c.x, var);
+            n.y = rng_gen->get_normal(c.y, var);
+            n.tier = c.tier;
+            n.cluster_id = c.id;
+
             n.x = std::clamp(n.x, params.world_min_x, params.world_max_x);
             n.y = std::clamp(n.y, params.world_min_y, params.world_max_y);
+
             nodes.push_back(n);
-            double theta = rng_gen->get_unif(0.1, 1.0); 
-            nodesThreshold.push_back(theta);
+            nodesThreshold.push_back(rng_gen->get_unif(0.1, 1.0));
         }
     };
 
-    // T1 nodes
     int idx = 0;
-    for (int i = 0; i < params.num_t1; ++i) { add_cluster_nodes(params.nodes_per_t1, centers[idx++], 0.02); }
-    // T2 nodes
-    for (int i = 0; i < params.num_t2; ++i) { add_cluster_nodes(params.nodes_per_t2, centers[idx++], 0.035); }
-    // T3 nodes
-    for (int i = 0; i < params.num_t3; ++i) { add_cluster_nodes(params.nodes_per_t3, centers[idx++], 0.05); }
-    // villages
-    for (int i = 0; i < params.num_villages; ++i) { add_cluster_nodes(params.nodes_per_village, centers[idx++], 0.08); }
+
+    // Cities
+    for (int i = 0; i < params.num_cities; ++i) {
+        add_cluster_nodes(params.nodes_per_city, centers[idx++], 0.03);
+    }
+
+    // Villages
+    for (int i = 0; i < params.num_villages; ++i) {
+        add_cluster_nodes(params.nodes_per_village, centers[idx++], 0.07);
+    }
 
     adj_list.assign(nodes.size(), std::unordered_set<int>());
 }
+
 
 void Graph::build_spatial_index() {
     if (grid) { delete grid; grid = nullptr; }
@@ -140,6 +149,7 @@ void Graph::build_spatial_index() {
 }
 
 void Graph::generate_edges() {
+    int edgeCnt = 0 ; 
     for (const auto &u : nodes) {
         auto candidates = grid->query_radius(u.x, u.y, cutoff_radius); // Costly operation 
         for (int vid : candidates) {
@@ -152,9 +162,12 @@ void Graph::generate_edges() {
             if (rng_gen->get_unif() < p) {
                 adj_list[u.id].insert(v.id);
                 adj_list[v.id].insert(u.id);
+                edgeCnt++ ;
             }
         }
     }
+
+    std::cout << "Generated edges: " << edgeCnt << "\n" ;
 }
 
 
@@ -172,12 +185,8 @@ void Graph::print_summary() const {
 // This denotes the probability that a person from a specific tier decides to moves 
 // That is Village person has a probability of 0.10 to move from village 
 double Graph::tier_move_prob(int t) const {
-    switch (t) {
-        case TIER_VILLAGE: return 0.10;
-        case TIER_TIER3:  return 0.05;
-        case TIER_TIER2:  return 0.02;
-        case TIER_TIER1:  default: return 0.01;
-    }
+    if (t == TIER_VILLAGE) return 0.10;
+    return 0.03; // CITY
 }
 
 // Now pick a center at random for the movement
@@ -188,7 +197,7 @@ int Graph::pick_target_cluster_weighted(int node_id) {
     std::vector<double> weights; weights.reserve(centers.size());
     double sum = 0.0;
     for (const auto &c : centers) {
-        int tier_bias = (c.tier >= u.tier) ? 2 : 1;
+        int tier_bias = (c.tier == TIER_CITY) ? 2 : 1;
         double d2 = distance_sq(u.x, u.y, c.x, c.y) + 1e-6;
         double w = tier_bias * (1.0 / d2);
         weights.push_back(w);
@@ -234,37 +243,104 @@ void Graph::move_node(int u, double newx, double newy, int newtier, int new_clus
 
 void Graph::simulate_movement(int num_steps) {
 
-    double local_move_variance = 0.01 * 0.01;
+    double local_move_variance   = 0.01 * 0.01;
     double cluster_move_variance = 0.02 * 0.02;
 
+#if DEBUG_MOVE
+    std::cout << "\n===== SIMULATE MOVEMENT START =====\n";
+    std::cout << "num_steps = " << num_steps
+              << ", local_var = " << local_move_variance
+              << ", cluster_var = " << cluster_move_variance << "\n";
+#endif
+
     for (int step = 0; step < num_steps; ++step) {
-        std::vector<int> movers; movers.reserve(nodes.size() / 20);
-        for (const auto &n : nodes) { 
-            double p = tier_move_prob(n.tier); 
-            // Use rng_gen->get_unif() which returns [0, 1]
-            if (rng_gen->get_unif() < p) movers.push_back(n.id); 
+
+#if DEBUG_MOVE
+        std::cout << "\n--- Movement step " << step << " ---\n";
+#endif
+
+        std::vector<int> movers;
+        movers.reserve(nodes.size() / 20);
+
+        // Decide movers
+        for (const auto &n : nodes) {
+            double p = tier_move_prob(n.tier);
+            double r = rng_gen->get_unif();
+
+#if DEBUG_MOVE
+            std::cout << "Node " << n.id
+                      << " [tier=" << n.tier << "] "
+                      << "move_prob=" << p
+                      << " rand=" << r;
+#endif
+
+            if (r < p) {
+                movers.push_back(n.id);
+#if DEBUG_MOVE
+                std::cout << "  -> MOVES\n";
+#endif
+            } else {
+#if DEBUG_MOVE
+                std::cout << "  -> stays\n";
+#endif
+            }
         }
+
+#if DEBUG_MOVE
+        std::cout << "Total movers this step: " << movers.size() << "\n";
+#endif
+
+        // Execute moves
         for (int u : movers) {
             Node &n = nodes[u];
+            int old_cluster = n.cluster_id;
+            int old_tier = n.tier;
+            double oldx = n.x, oldy = n.y;
+
             int target_center_id = pick_target_cluster_weighted(u);
             const Center &tc = centers[target_center_id];
             int newtier = tc.tier;
+
             double newx, newy;
-            if (n.tier == TIER_TIER1 && newtier == TIER_TIER1) {
-                // Use rng_gen->get_normal()
-                newx = n.x + rng_gen->get_normal(0.0, local_move_variance); 
+
+            if (n.tier == TIER_CITY && newtier == TIER_CITY) {
+                newx = n.x + rng_gen->get_normal(0.0, local_move_variance);
                 newy = n.y + rng_gen->get_normal(0.0, local_move_variance);
+#if DEBUG_MOVE
+                std::cout << "Node " << u
+                          << " CITY->CITY local move\n";
+#endif
             } else {
-                newx = rng_gen->get_normal(tc.x, cluster_move_variance); 
+                newx = rng_gen->get_normal(tc.x, cluster_move_variance);
                 newy = rng_gen->get_normal(tc.y, cluster_move_variance);
+#if DEBUG_MOVE
+                std::cout << "Node " << u
+                          << " cluster move to center "
+                          << target_center_id << "\n";
+#endif
             }
+
             newx = std::clamp(newx, params.world_min_x, params.world_max_x);
             newy = std::clamp(newy, params.world_min_y, params.world_max_y);
+
+#if DEBUG_MOVE
+            std::cout << std::fixed << std::setprecision(3)
+                      << "Node " << u
+                      << ": (" << oldx << "," << oldy << ")"
+                      << " -> (" << newx << "," << newy << ")"
+                      << " tier " << old_tier << " -> " << newtier
+                      << " cluster " << old_cluster << " -> " << tc.id
+                      << "\n";
+#endif
+
             move_node(u, newx, newy, newtier, tc.id);
         }
     }
-}
 
+#if DEBUG_MOVE
+    std::cout << "===== SIMULATE MOVEMENT END =====\n";
+#endif
+}
 
 // Main function for testing
 // int main() {

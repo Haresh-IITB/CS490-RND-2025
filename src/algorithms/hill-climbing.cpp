@@ -1,99 +1,146 @@
 #include "waxman-graph.h"
-#include <set>
-#include <functional>
-#include <vector>
-#include <iostream> 
+#include <iostream>
 
-std::vector<int> hill_climbing(Graph & G, 
-    const int & K,
-    const std::vector<int> & InfectedNodes, 
-    std::function<int(Graph&, std::vector<bool>&, const int&, const std::vector<int> &)> evaluator,
-    std::vector<int> initialVaccinatedNodes, 
-    int max_iter)
-{
-    int num_nodes = G.nodes.size();
-    
-    std::set<int> S ; // set of vacinnated nodes 
-    for(int node : initialVaccinatedNodes) S.insert(node) ; 
-    
-    // isVaccinable means "is available to be chosen as a replacement"
-    std::vector<bool> isVaccinable(num_nodes, true); 
-    
-    // for(int i : InfectedNodes)
-    //     isVaccinable[i] = false; 
-    for(int elem : S){
-        isVaccinable[elem] = false; 
-    }
+// #define DEBUG 
 
-    // Local Search for another vaccinable node 
-    bool converged = false; 
-    int iterCnt = 0 ; 
+#ifdef DEBUG
+    #define DBG(x) do { std::cerr << x << std::endl; } while(0)
+#else
+    #define DBG(x) do {} while(0)
+#endif
 
-    while (!converged && iterCnt < max_iter){
-        converged = true ; // Assume convereged 
-        
-        // Get baseline score for the current set S
-        // We pass `isVaccinable` which already has S *removed* from the pool.
-        int currSavedCnt = evaluator(G, isVaccinable, -1, InfectedNodes); 
 
-        int bestSavedCnt = currSavedCnt; 
-        int bestNodeToAdd = -1;    // The node 'v' to add
-        int bestNodeToDrop = -1; // The node 'u' to remove
+void HIll_Climbing(
+    Graph & G,
+    const int & k, 
+    const std::vector<int> & initial_infected,
+    std::vector<int> & out_vaccinated_nodes,
+    std::function<int(
+        Graph &,
+        const std::vector<bool> &,
+        const int &,
+        const std::vector<bool> &,
+        const uint64_t &,
+        const int &
+    )> Simulator,
+    int stepSize,
+    int T,
+    int max_no_improve_iters,
+    const std::vector<int> & intial_vaccinated_nodes = std::vector<int>()
+) {
+    int N = G.nodes.size();
+    std::vector<bool> Vaccinated_Node(N, false);
+    std::vector<bool> Infected_Node(N, false);
+    std::unordered_set<int> Vaccinated_List;
 
-        for(int u : S){ // For each node 'u' in our vaccinated set
-            isVaccinable[u] = true; // Temporarily "un-vaccinate" u, making it available
-            
-            // Now check every *other* node 'v' as a replacement
-            for(int v = 0 ; v < num_nodes; v++){ 
-                if(!isVaccinable[v]) continue; // Skip if 'v' is infected or already in S
-                
-                // Score for the set (S - {u}) + {v}
-                // We test adding 'v' to the pool where 'u' is also available
-                int SavedCntV = evaluator(G, isVaccinable, v, InfectedNodes); 
-                
-                if(SavedCntV > bestSavedCnt){
-                    bestSavedCnt = SavedCntV; 
-                    bestNodeToAdd = v; 
-                    bestNodeToDrop = u; 
-                }
+    for (int u : initial_infected)
+        Infected_Node[u] = true;
+
+    // Initial random selection
+    std::mt19937 gen(42);
+    std::uniform_int_distribution<> dis(0, N - 1);
+
+    if(!intial_vaccinated_nodes.empty()) {
+        for (int u : intial_vaccinated_nodes) {
+            if (!Vaccinated_Node[u] && !Infected_Node[u]) {
+                Vaccinated_Node[u] = true;
+                Vaccinated_List.insert(u);
             }
-            isVaccinable[u] = false; // "Re-vaccinate" u before checking the next swap
         }
-
-        if(bestNodeToAdd != -1){ 
-            converged = false; 
-            
-            // Perform the swap
-            S.erase(bestNodeToDrop); 
-            S.insert(bestNodeToAdd); 
-            
-            // Update the "vaccinable" map for the next iteration
-            isVaccinable[bestNodeToDrop] = true; 
-            isVaccinable[bestNodeToAdd] = false;
-            
-            std::cout << "  HC iter " << (iterCnt+1) << ": Swapped " 
-                      << bestNodeToDrop << " (out) for " 
-                      << bestNodeToAdd << " (in). New score: " 
-                      << bestSavedCnt << std::endl;
+    }else{
+        while ((int)Vaccinated_List.size() < k) {
+            int u = dis(gen);
+            if (!Vaccinated_Node[u] && !Infected_Node[u]) {
+                Vaccinated_Node[u] = true;
+                Vaccinated_List.insert(u);
+            }
         }
-        iterCnt++; 
     }
 
-    if (converged && iterCnt > 0) {
-         std::cout << "  Hill climbing converged after " << iterCnt << " iterations." << std::endl;
-    } else if (iterCnt == max_iter) {
-         std::cout << "  Hill climbing stopped at max_iter " << max_iter << "." << std::endl;
-    } else {
-         std::cout << "  Hill climbing found no improvement from initial set." << std::endl;
+    DBG("[INIT] Initial vaccinated size = " << Vaccinated_List.size());
+
+    // Seeds
+    std::vector<uint64_t> array_seed(T);
+    for (int t = 0; t < T; ++t)
+        array_seed[t] = 2024 + t;
+
+    bool converged = false;
+    int no_improve_iters = 0;
+
+    while (!converged && no_improve_iters < max_no_improve_iters) {
+        converged = true;
+        DBG("\n[ITER] no_improve_iters = " << no_improve_iters);
+
+        // SAFE iteration snapshot
+        std::vector<int> vaccinated_snapshot(
+            Vaccinated_List.begin(), Vaccinated_List.end()
+        );
+
+        // Compute baseline ONCE
+        int baseline_saved = 0;
+        for (int t = 0; t < T; ++t)
+            baseline_saved += Simulator(
+                G, Vaccinated_Node, -1,
+                Infected_Node, array_seed[t], stepSize
+            );
+
+        DBG("  Baseline saved = " << baseline_saved);
+
+        for (int u_out : vaccinated_snapshot) {
+
+            int best_u_in = -1;
+            int best_saved = baseline_saved;
+
+            // Check for swap with all non-vaccinated and non-infected nodes
+            for (int u_in = 0; u_in < N; ++u_in) {
+                if (Vaccinated_Node[u_in] || Infected_Node[u_in])
+                    continue;
+
+                Vaccinated_Node[u_out] = false;
+                Vaccinated_Node[u_in] = true;
+
+                int current_saved = 0;
+                for (int t = 0; t < T; ++t)
+                    current_saved += Simulator(
+                        G, Vaccinated_Node, -1,
+                        Infected_Node, array_seed[t], stepSize
+                    );
+
+                DBG("    Try swap OUT=" << u_out
+                    << " IN=" << u_in
+                    << " saved=" << current_saved);
+
+                if (current_saved > best_saved) {
+                    best_saved = current_saved;
+                    best_u_in = u_in;
+                }
+
+                Vaccinated_Node[u_out] = true;
+                Vaccinated_Node[u_in] = false;
+            }
+
+            if (best_u_in != -1) {
+                DBG("  ACCEPT swap: OUT=" << u_out
+                    << " IN=" << best_u_in
+                    << " gain=" << (best_saved - baseline_saved));
+
+                Vaccinated_Node[u_out] = false;
+                Vaccinated_Node[best_u_in] = true;
+                Vaccinated_List.erase(u_out);
+                Vaccinated_List.insert(best_u_in);
+
+                converged = false;
+                break;
+            }
+        }
+
+        no_improve_iters++;
     }
 
+    out_vaccinated_nodes.assign(
+        Vaccinated_List.begin(),
+        Vaccinated_List.end()
+    );
 
-    std::vector<int> result; 
-    for(int elem : S)
-        result.push_back(elem); 
-
-    return result; 
+    DBG("[DONE] Final vaccinated size = " << out_vaccinated_nodes.size());
 }
-
-
-

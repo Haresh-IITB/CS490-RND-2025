@@ -6,103 +6,132 @@
 //   3) graph moves (simulate_movement(1)) + rewires edges
 // Repeat until no new activations.
 
+// Assumed that influence weight from u to v is 1/deg(v)
+
+// The waxmaan weights are very small try to multiply it by a factor **** 
+
+// #define DEBUG 
+
 #include "waxman-graph.h"
-#include "Random_number_generator.h"
-#include <vector>
 #include <queue>
-#include <cmath>
 #include <iostream>
 
-// LT_Simulation:
-// returns number of saved nodes = V - infected_count
-int LT_Simulation(Graph &G,
-                  std::vector<bool> &isVaccinable,           // original vaccination masks (NOT modified)
-                  const int &newVaccinatedNode,              // vaccinated candidate
-                  const std::vector<int> &infected_nodes)   // initial infected
-{
-    // 1) Copy the graph (so evaluator does NOT mutate original)
-    Graph::Params params_copy = G.params;
-    Graph Gc(params_copy, 1337);   // deterministic seed for fairness
+#ifdef DEBUG
+#define DBG(x) do { std::cerr << x << std::endl; } while(0)
+#else
+#define DBG(x) do {} while(0)
+#endif
 
+int LinearThreshold_Simulator(
+    Graph & G,
+    const std::vector<bool> & Vaccinated_Node,
+    const int & newVaccinatedNode, 
+    const std::vector<bool> & Infected_Node,
+    const uint64_t & seed,
+    const int & stepSize
+) {
+    DBG("[LT] Simulator start | seed=" << seed
+        << " stepSize=" << stepSize);
+
+    // 1) Copy the graph
+    Graph::Params params_copy = G.params;
+    Graph Gc(params_copy, seed);
     Gc.centers = G.centers;
-    Gc.nodes   = G.nodes;
+    Gc.nodes = G.nodes;
     Gc.adj_list = G.adj_list;
     Gc.nodesThreshold = G.nodesThreshold;
     Gc.build_spatial_index();
-
-    const int N = Gc.nodes.size();
-
-
-    // 2) Build infectability mask
-    std::vector<int> infectable(N, 1);   // 1 = can be infected
-    for (int i = 0; i < (int)isVaccinable.size() && i < N; i++) {
-        if (!isVaccinable[i])
-            infectable[i] = 0;
+    
+    // Generate the thershold based on the seed 
+    for(int i = 0; i < (int)Gc.nodes.size(); i++) {
+        Gc.nodesThreshold[i] = Gc.rng_gen->get_unif();
     }
-    if (newVaccinatedNode != -1)
-        infectable[newVaccinatedNode] = 0;
 
-    // 3) Initialize LT influence scores + infection state
-    std::vector<double> influence(N, 0.0);
-    std::vector<int> infected(N, 0);
+    const int N = G.nodes.size();
+    std::vector<bool> Active_Node(N, false);
+    std::vector<double> Accumulated_Influence(N, 0.0);
 
+    // Immune Mask 
+    std::vector<int> immune(N, 0);
+    for (int i = 0; i < (int)Vaccinated_Node.size() && i < N; i++)
+        if (Vaccinated_Node[i]) immune[i] = 1;
+    
+    if(newVaccinatedNode != -1)
+        immune[newVaccinatedNode] = 1;
+
+    int vaccinatedCount = 0;
+    for (int i = 0; i < N; ++i)
+        if (immune[i]) vaccinatedCount++;
+
+    DBG("[LT] Total nodes=" << N
+        << " vaccinated=" << vaccinatedCount);
+
+    // Initialize active nodes
+    for (int u = 0; u < N; ++u) {
+        if (Infected_Node[u] && !Vaccinated_Node[u]) {
+            Active_Node[u] = true;
+        }
+    }
+
+    // Use a BFS approach for influence propagation
     std::queue<int> frontier;
-
-    int infectedCount = 0;
-    for (int u : infected_nodes) {
-        if (u < 0 || u >= N) continue;
-        if (!infectable[u]) continue;
-        infected[u] = 1;
-        frontier.push(u);
-        infectedCount++;
+    for (int u = 0; u < N; ++u) {
+        if (Active_Node[u]) {
+            frontier.push(u);
+        }
     }
 
-    // std::cout << "Initial infected count in LT_Simulation: " << infectedCount << "\n";
+    int activeCount = frontier.size();
+    int steps = 0;
 
-    if (frontier.empty()) {
-        return N - infectedCount;  // nothing to infect
-    }
+    DBG("[LT] Initial active nodes=" << activeCount);
 
-    // 4) LT Spread + movement loop
-    while (!frontier.empty()) {
+    while(!frontier.empty()) {
         std::queue<int> next_frontier;
 
-        // Phase A: influence propagation 
-        while (!frontier.empty()) {
+        DBG("[LT] Step " << steps
+            << " | frontier size=" << frontier.size());
+
+        if(steps > 0 && stepSize > 0 && steps % stepSize == 0) {
+            DBG("[LT] Simulating movement at step " << steps);
+            Gc.simulate_movement(stepSize);
+        }
+
+        while(!frontier.empty()) {
             int u = frontier.front();
             frontier.pop();
 
-            // iterate neighbors of u in copied graph
             for (int v : Gc.adj_list[u]) {
-                if (!infectable[v]) continue;   // vaccinated
-                if (infected[v]) continue;      // already active
+                if (Active_Node[v] || immune[v]) continue;
 
-                // weight = Waxman probability p(u,v)
-                double w = Gc.params.alpha * std::exp(
-                    -Gc.distance(Gc.nodes[u].x, Gc.nodes[u].y, 
-                                 Gc.nodes[v].x, Gc.nodes[v].y) / 
-                      Gc.params.beta
-                );
+                // Compute influence weight from u to v
+                double weight = 1.0 / Gc.adj_list[v].size();
+                Accumulated_Influence[v] += weight;
 
-                influence[v] += w;
+                DBG("[LT] u=" << u
+                    << " -> v=" << v
+                    << " | influence=" << Accumulated_Influence[v]
+                    << " threshold=" << Gc.nodesThreshold[v]);
 
-                // check threshold crossing
-                if (influence[v] >= Gc.nodesThreshold[v]) {
-                    infected[v] = 1;
+                if(Accumulated_Influence[v] >= Gc.nodesThreshold[v]) {
+                    Active_Node[v] = true;
                     next_frontier.push(v);
-                    infectedCount++;
+                    activeCount++;
+
+                    DBG("[LT] Node " << v
+                        << " ACTIVATED at step " << steps);
                 }
             }
         }
 
-        // No new activations → stop here 
-        if (next_frontier.empty()) break;
-
-        // Phase B: move graph + rewire edges 
-        Gc.simulate_movement(1);
-
-        frontier = std::move(next_frontier);
+        steps++;
+        frontier = next_frontier;
     }
 
-    return N - infectedCount; // number of saved nodes
+    DBG("[LT] Simulation end | total active="
+        << activeCount
+        << " inactive=" << (N - activeCount)
+        << " steps=" << steps);
+
+    return N - activeCount;
 }

@@ -7,7 +7,21 @@
 #include<set> 
 #include<queue> 
 
-int LT_Simulation (Graph & G, std::vector<bool> & isVaccinable, const int & newVaccinatedNode, const std::vector<int> & infected_nodes) ; 
-int IC_Simulation (Graph & G, std::vector<bool> & isVaccinable, const int & newVaccinatedNode, const std::vector<int> & infected_nodes) ; 
+int IC_Simulation(Graph &G,
+                  const std::vector<bool> &Vaccinated_Node,
+                  const int &newVaccinatedNode,
+                  const std::vector<bool> &Infected_Node,
+                  const uint64_t &seed,
+                  const int &stepSize) ; 
 
+
+int LinearThreshold_Simulator(
+    Graph & G,
+    const std::vector<bool> & Vaccinated_Node,
+    const int & newVaccinatedNode, 
+    const std::vector<bool> & Infected_Node,
+    const uint64_t & seed,
+    const int & stepSize
+) ;
+            
 #endif

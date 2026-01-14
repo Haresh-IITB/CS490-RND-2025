@@ -1,55 +1,16 @@
-###############################################
-#  Waxman Dynamic Graph + Epidemic Simulation
-#  CONFIGURATION FILE
-#  (Percentage-based infected & vaccination k)
-###############################################
+# -------- Graph --------
+alpha=0.05
+beta=0.2
+cutoff_prob=0.0
+num_centers=5
 
-############# WORLD GEOMETRY ##################
+# -------- Experiment --------
+node_sizes=2048
+initial_infected_percent=0.10
+vaccination_budget_percent=0.10
+T=10
+stepSize=0
+seed=42
 
-world_min_x = 0.0
-world_min_y = 0.0
-world_max_x = 10.0
-world_max_y = 10.0
-
-############# TIER CENTER COUNTS ##############
-
-num_t1 = 2
-num_t2 = 4
-num_t3 = 8
-num_villages = 16
-
-############# NODES PER CLUSTER ###############
-
-nodes_per_t1 = 50
-nodes_per_t2 = 20
-nodes_per_t3 = 10
-nodes_per_village = 5
-
-############# WAXMAN EDGE PARAMETERS ##########
-
-alpha = 0.4
-beta = 0.1
-cutoff_prob = 0.001
-grid_cell_size = 0.15
-
-############# SIMULATION SETTINGS #############
-
-# Percentage of nodes infected initially (e.g. 1.5 = 1.5%)
-initial_infected_percent = 1.0
-
-# Percentage of total nodes to vaccinate (e.g. 5 = 5%)
-vaccination_budget_percent = 5.0
-
-# Dynamic movement steps INSIDE simulation (handled by IC/LT)
-num_steps = 50
-
-seed = 2025
-
-############# PAGE RANK ########################
-
-pagerank_alpha = 0.85
-pagerank_tol = 1e-6
-
-################################################
-# END
-################################################
+# -------- Model --------
+diffusion_model=IC

@@ -7,6 +7,10 @@
 #include <sys/stat.h> // For mkdir
 #include "waxman-graph.h" 
 #include<sstream>
+
+// 1. The larger the beta, more likely long-range edges will form, increasing overall connectivity.
+// 2. The larger the alpha, more dense the graph becomes.
+
 // Utility to create directories
 void ensure_directory(const std::string& path) {
     std::string cmd = "mkdir -p " + path;
@@ -43,15 +47,13 @@ void run_parameter_experiment(const std::string& out_dir) {
     struct Config { double a, b; };
     std::vector<Config> configs = {
         {0.05, 0.05}, {0.05, 0.3},  // Row 1: Low Alpha (Sparse) varying Beta
-        {0.3, 0.05},  {0.3, 0.3}    // Row 2: High Alpha (Dense) varying Beta
+        {0.4, 0.05},  {0.4, 0.3}    // Row 2: High Alpha (Dense) varying Beta
     };
 
     Graph::Params p;
     // Fixed sizes for comparison
-    p.num_t1 = 2; p.nodes_per_t1 = 40;
-    p.num_t2 = 3; p.nodes_per_t2 = 20;
-    p.num_t3 = 5; p.nodes_per_t3 = 10;
-    p.num_villages = 5; p.nodes_per_village = 5;
+    p.num_cities = 5; p.nodes_per_city = 50;
+    p.num_villages = 25; p.nodes_per_village = 15;
     p.cutoff_prob = 1e-3;
 
     for(const auto& cfg : configs) {
@@ -79,9 +81,8 @@ void run_movement_experiment(const std::string& out_dir) {
     
     Graph::Params p;
     // Dense configuration
-    p.num_t1 = 3;   p.nodes_per_t1 = 100;
-    p.num_t2 = 6;   p.nodes_per_t2 = 40;
-    p.num_t3 = 12;  p.nodes_per_t3 = 15;
+    p.num_cities = 5; p.nodes_per_city = 50;
+    p.num_villages = 25; p.nodes_per_village = 15;
     p.num_villages = 20; p.nodes_per_village = 5;
     
     p.alpha = 0.2; p.beta = 0.1; // Reasonable connectivity
@@ -112,17 +113,18 @@ void run_time_analysis(const std::string& out_dir) {
     time_file << "N,Time_ms\n";
 
     // Extended range of nodes
-    std::vector<int> node_counts = {100,500,1000, 2000, 5000, 10000, 20000};
+    std::vector<int> node_counts = {100,500,1000, 2000, 5000, 10000 };
     
     Graph::Params p;
     // Simplified structure for pure scaling test (mostly T1 nodes)
-    p.num_t1 = 1; 
-    p.num_t2 = 0; p.num_t3 = 0; p.num_villages = 0; 
-    p.alpha = 0.1; p.beta = 0.1;
+    p.num_cities = 5; p.nodes_per_city = 50;
+    p.num_villages = 25; p.nodes_per_village = 15;
+    p.num_villages = 20; p.nodes_per_village = 5;
+    p.alpha = 0.05; p.beta = 0.3;
     p.cutoff_prob = 1e-3;
 
     for (int n : node_counts) {
-        p.nodes_per_t1 = n; 
+        p.nodes_per_city = n; 
 
         auto start = std::chrono::high_resolution_clock::now();
 

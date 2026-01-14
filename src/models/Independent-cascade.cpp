@@ -1,123 +1,174 @@
-// IndependentCascade.cpp
-// dynamic Independent Cascade on a COPY of the Graph:
-// at each timestep:
-//   1) infected frontier attempts to infect neighbors (one-shot per neighbor)
-//   2) graph moves nodes (simulate_movement(1)) and rewires edges
-// repeats until no new infections
-
 #include "waxman-graph.h"
-#include "Random_number_generator.h"
-#include <vector>
 #include <queue>
-#include <unordered_set>
-#include <algorithm>
 #include <iostream>
+#include <iomanip>
 
-// Infection probability per attempted edge 
-const double INFECTION_P = 0.05;
+#define DEBUG_IC 0
 
-// IC_Simulation signature matches your earlier usage:
-// returns number of SAVED nodes (V - infectedCount)
+double prob_ic_edge2(
+    const Graph &G,
+    int u,
+    int v,
+    double weight = 5.0) {
+
+    double d = G.distance(
+        G.nodes[u].x, G.nodes[u].y,
+        G.nodes[v].x, G.nodes[v].y
+    );
+    double p = std::min((double)1, weight*G.params.alpha * std::exp(-d / G.params.beta));
+    return p;
+}
+
 int IC_Simulation(Graph &G,
-                  std::vector<bool> &isVaccinable,           // original vaccinable flags (NOT modified)
-                  const int &newVaccinatedNode,              // -1 if none, otherwise node index to temporarily vaccinate
-                  const std::vector<int> &infected_nodes)   // initial infected set (indices)
+                  const std::vector<bool> &Vaccinated_Node,
+                  const int &newVaccinatedNode,
+                  const std::vector<bool> &Infected_Node,
+                  const uint64_t &seed,
+                  const int &stepSize)
 {
+#if DEBUG_IC
+    std::cout << "\n================ IC SIMULATION START ================\n";
+    std::cout << "Seed = " << seed
+              << ", newVaccinatedNode = " << newVaccinatedNode
+              << ", stepSize = " << stepSize << "\n";
+#endif
 
-    // Construct new graph with same Params
+    // 1) Copy the graph
     Graph::Params params_copy = G.params;
-    Graph Gc(params_copy, 1337);
+    Graph Gc(params_copy, seed);
 
-    // copy structural data
     Gc.centers = G.centers;
     Gc.nodes = G.nodes;
     Gc.adj_list = G.adj_list;
-
-    // rebuild spatial index for the copied nodes 
+    Gc.nodesThreshold = G.nodesThreshold;
     Gc.build_spatial_index();
 
-    // --- Prepare vaccination / infectable maps (do NOT change original isVaccinable) ---
-    const int N = (int)Gc.nodes.size();
-    std::vector<int> isInfectable(N, 1); // int for compactness
+    // Create a edgeRand struct 
+    UndirectedEdgeRandom edgeRand(seed);
 
-    // start by marking non-infectable all nodes that are not vaccinable (i.e., already vaccinated)
-    for (int i = 0; i < isVaccinable.size() && i < N; ++i) {
-        if (!isVaccinable[i]) isInfectable[i] = 0;
-    }
+    const int N = Gc.nodes.size();
 
-    // apply the candidate vaccination (temporary)
-    if (newVaccinatedNode != -1 && newVaccinatedNode >= 0 && newVaccinatedNode < N) {
-        isInfectable[newVaccinatedNode] = 0;
-    }
+    // Immune mask
+    std::vector<int> immune(N, 0);
+    for (int i = 0; i < (int)Vaccinated_Node.size() && i < N; i++)
+        if (Vaccinated_Node[i]) immune[i] = 1;
 
-    // --- Initialize RNG for infection draws (independent from Graph internals) ---
-    Random_number_generator rng(1337);
+    if (newVaccinatedNode != -1)
+        immune[newVaccinatedNode] = 1;
 
-    // --- Initialize infection state ---
-    std::vector<int> infected(N, 0); // who has ever been infected
-    std::queue<int> frontier;         // nodes that will attempt infection this timestep
+#if DEBUG_IC
+    std::cout << "Immune nodes: ";
+    for (int i = 0; i < N; ++i)
+        if (immune[i]) std::cout << i << " ";
+    std::cout << "\n";
+#endif
 
-    // Seed initial infected nodes (but skip those that are vaccinated)
+    // Initial infection
+    std::vector<int> infected(N, 0);
+    std::queue<int> frontier;
     int infectedCount = 0;
-    for (int u : infected_nodes) {
-        if (u < 0 || u >= N) continue;
-        if (!isInfectable[u]) continue; // vaccinated -> cannot be infected
-        if (!infected[u]) {
+
+#if DEBUG_IC
+    std::cout << "Initial infected: ";
+#endif
+    for (int u = 0; u < N; ++u) {
+        if (Infected_Node[u]) {
             infected[u] = 1;
             frontier.push(u);
             infectedCount++;
+#if DEBUG_IC
+            std::cout << u << " ";
+#endif
         }
     }
+#if DEBUG_IC
+    std::cout << "\n";
+#endif
 
-    // std::cout << "Initial infected count in IC_Simulation: " << infectedCount << "\n";
-
-    // If nothing is initially infected (or all vaccinated), return saved = N - 0 = N
-    if (frontier.empty()) {
-        return N - infectedCount;
-    }
-
-
-    // Each iteration: current frontier attempts infections; then we move nodes/rewire; new infections form next frontier
+    int steps = 0;
+    int time = 0 ; 
+    // IC propagation
     while (!frontier.empty()) {
+
+#if DEBUG_IC
+        std::cout << "\n--- IC STEP " << steps << " ---\n";
+        std::cout << "Frontier: ";
+        std::queue<int> tmp = frontier;
+        while (!tmp.empty()) {
+            std::cout << tmp.front() << " ";
+            tmp.pop();
+        }
+        std::cout << "\n";
+#endif
+
         std::queue<int> next_frontier;
 
-        // Process each active infector u
+        // Movement
+        if (steps > 0 && stepSize > 0 && steps % stepSize == 0) {
+            Gc.simulate_movement(stepSize);
+            time ++ ; 
+            #if DEBUG_IC
+                        std::cout << ">>> Movement triggered ("
+                                  << stepSize << " steps)\n";
+                        // Adjanecy list after movement
+                        std::cout << "Adjacency List after movement:\n";
+                        for (int i = 0; i < N; ++i) {
+                            std::cout << "Node " << i << ": ";
+                            for (int v : Gc.adj_list[i])
+                                std::cout << v << " ";
+                            std::cout << "\n";
+                        }
+            #endif
+        }
+
         while (!frontier.empty()) {
             int u = frontier.front();
             frontier.pop();
 
-            // iterate over neighbors in the copied graph's adjacency list
-            // note: adj_list[u] contains neighbor ids
             for (int v : Gc.adj_list[u]) {
-                if (v < 0 || v >= N) continue;
-                if (!isInfectable[v]) continue;   // vaccinated / not infectable
-                if (infected[v]) continue;       // already infected earlier
+                if (infected[v] || immune[v]) continue;
 
-                // attempt infection with probability INFECTION_P
-                int succ = rng.get_bernoulli(INFECTION_P);
-                if (succ) {
+                double p = prob_ic_edge2(G, u, v, 2.0); 
+                double r = edgeRand.get(u, v, time);
+
+#if DEBUG_IC
+                std::cout << "Try infect: " << u << " -> " << v
+                          << " | d=" << std::fixed << std::setprecision(3) << d
+                          << " p=" << p
+                          << " r=" << r;
+#endif
+
+                if (r < p) {
                     infected[v] = 1;
                     next_frontier.push(v);
                     infectedCount++;
+#if DEBUG_IC
+                    std::cout << "  [INFECTED]\n";
+#endif
+                } else {
+#if DEBUG_IC
+                    std::cout << "  [FAIL]\n";
+#endif
                 }
             }
-        } 
-
-        // After infection attempts at this timestep, perform movement + rewiring
-        // This models edge changes between timesteps (dynamic graph) ** TUNABLE Parameter** , so you can adjust movement frequency
-        if (next_frontier.empty()) {
-            // no new infections; still could move nodes but since no future infections will occur, we can break early
-            break;
-        } else {
-            // Move nodes by one step (this updates positions and adjacency via your Graph implementation)
-            Gc.simulate_movement(1);
-
-            // Now use next_frontier as frontier for next iteration
-            frontier = std::move(next_frontier);
         }
-    } // while frontier
 
-    // Compute saved nodes (those not infected)
-    int saved = N - infectedCount;
-    return saved;
+        frontier = next_frontier;
+        steps++;
+    }
+
+#if DEBUG_IC
+    std::cout << "\nFinal infected nodes: ";
+    for (int i = 0; i < N; ++i)
+        if (infected[i]) std::cout << i << " ";
+    std::cout << "\n";
+
+    std::cout << "Total infected = " << infectedCount
+              << ", saved = " << (N - infectedCount) << "\n";
+    std::cout << "================ IC SIMULATION END =================\n";
+#endif
+
+    // std::cout << "Infected Nodes = " << infectedCount << "\n" ;
+
+    return N - infectedCount;
 }

@@ -1,0 +1,30 @@
+
+Gurobi 13.0.0 (mac64[arm], gurobi_cl) logging started Sat Jan  3 19:17:32 2026
+
+Set parameter Username
+Set parameter LicenseID to value 2760087
+Set parameter LogFile to value "gurobi.log"
+Using license file /Users/hp/gurobi.lic
+Academic license - for non-commercial use only - expires 2026-12-31
+
+Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (mac64[arm] - Darwin 24.5.0 24F74)
+Copyright (c) 2025, Gurobi Optimization, LLC
+
+
+Error 10012: Unknown file type for file '/Library/gurobi1300/macos_universal2/examples/c++/lp_c++.cpp'
+
+
+Gurobi 13.0.0 (mac64[arm], gurobi_cl) logging started Sat Jan  3 19:18:35 2026
+ 
+Set parameter Username
+Set parameter LicenseID to value 2760087
+Set parameter LogFile to value "gurobi.log"
+Using license file /Users/hp/gurobi.lic
+Academic license - for non-commercial use only - expires 2026-12-31
+
+Gurobi Optimizer version 13.0.0 build v13.0.0rc1 (mac64[arm] - Darwin 24.5.0 24F74)
+Copyright (c) 2025, Gurobi Optimization, LLC
+
+
+Error 10012: Unknown file type for file '/Library/gurobi1300/macos_universal2/examples/c++/mip1_c++.cpp'
+
