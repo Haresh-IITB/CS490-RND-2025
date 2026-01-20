@@ -436,3 +436,9 @@ int main() {
 
 
 // Total Count - 2048 , Baseline Infected - 739 , Vaccinated Infected - 457 , Vaccninated Nodes - 204 , Extra saved by vaccination - 282 , More : 78 
+
+/*
+TODOs : 
+1. Make a wrapper to distrubte vaccines over time steps rather than all at once. using the above algorithms. 
+2. Add constraints in LP to be time aware, so it gives a time aware vaccination 
+*/

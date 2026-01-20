@@ -119,7 +119,7 @@ def generate_benchmark_plot():
                 # x-axis is log2 of number of nodes
                 ax1.plot(np.log2(sub['num_nodes']), sub[col], 
                          label=style['label'], color=style['color'], marker=style['marker'])
-
+                                
     ax1.set_ylabel('% Nodes Saved')
     ax1.set_title('Percentage of Nodes Saved (Step Size = 3)')
     ax1.grid(True, linestyle='--', alpha=0.7)

@@ -128,7 +128,7 @@ int IC_Simulation(Graph &G,
             for (int v : Gc.adj_list[u]) {
                 if (infected[v] || immune[v]) continue;
 
-                double p = prob_ic_edge2(G, u, v, 2.0); 
+                double p = prob_ic_edge2(G, u, v, 5.0); 
                 double r = edgeRand.get(u, v, time);
 
 #if DEBUG_IC
