@@ -5,26 +5,13 @@
 
 #define DEBUG_IC 0
 
-double prob_ic_edge2(
-    const Graph &G,
-    int u,
-    int v,
-    double weight = 5.0) {
-
-    double d = G.distance(
-        G.nodes[u].x, G.nodes[u].y,
-        G.nodes[v].x, G.nodes[v].y
-    );
-    double p = std::min((double)1, weight*G.params.alpha * std::exp(-d / G.params.beta));
-    return p;
-}
-
 int IC_Simulation(Graph &G,
                   const std::vector<bool> &Vaccinated_Node,
                   const int &newVaccinatedNode,
                   const std::vector<bool> &Infected_Node,
                   const uint64_t &seed,
-                  const int &stepSize)
+                  const int &stepSize,
+                  const double prob_infect)
 {
 #if DEBUG_IC
     std::cout << "\n================ IC SIMULATION START ================\n";
@@ -128,7 +115,6 @@ int IC_Simulation(Graph &G,
             for (int v : Gc.adj_list[u]) {
                 if (infected[v] || immune[v]) continue;
 
-                double p = prob_ic_edge2(G, u, v, 5.0); 
                 double r = edgeRand.get(u, v, time);
 
 #if DEBUG_IC
@@ -138,7 +124,7 @@ int IC_Simulation(Graph &G,
                           << " r=" << r;
 #endif
 
-                if (r < p) {
+                if (r < prob_infect) {
                     infected[v] = 1;
                     next_frontier.push(v);
                     infectedCount++;
@@ -167,8 +153,5 @@ int IC_Simulation(Graph &G,
               << ", saved = " << (N - infectedCount) << "\n";
     std::cout << "================ IC SIMULATION END =================\n";
 #endif
-
-    // std::cout << "Infected Nodes = " << infectedCount << "\n" ;
-
-    return N - infectedCount;
+    return N - infectedCount; // return number of saved nodes 
 }

@@ -137,7 +137,7 @@ void Graph::generate_nodes() {
     for (int i = 0; i < params.num_villages; ++i) {
         add_cluster_nodes(params.nodes_per_village, centers[idx++], 0.07);
     }
-
+    
     adj_list.assign(nodes.size(), std::unordered_set<int>());
 }
 
@@ -149,7 +149,7 @@ void Graph::build_spatial_index() {
 }
 
 void Graph::generate_edges() {
-    int edgeCnt = 0 ; 
+    // int edgeCnt = 0 ; 
     for (const auto &u : nodes) {
         auto candidates = grid->query_radius(u.x, u.y, cutoff_radius); // Costly operation 
         for (int vid : candidates) {
@@ -162,12 +162,12 @@ void Graph::generate_edges() {
             if (rng_gen->get_unif() < p) {
                 adj_list[u.id].insert(v.id);
                 adj_list[v.id].insert(u.id);
-                edgeCnt++ ;
+                // edgeCnt++ ;
             }
         }
     }
 
-    std::cout << "Generated edges: " << edgeCnt << "\n" ;
+    // std::cout << "Generated edges: " << edgeCnt << "\n" ;
 }
 
 

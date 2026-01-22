@@ -20,13 +20,21 @@ EXEC_BENCHMARK_VACCINATION = $(BIN_DIR)/benchmark-vaccination
 EXEC_BENCHMARK_STEPSIZE = $(BIN_DIR)/benchmark-stepsize
 EXEC_BENCHMARK_LP = $(BIN_DIR)/benchmark-lp
 
-COMMON_SOURCES = $(shell find $(SRC_DIR) -name '*.cpp' ! -name 'main.cpp' ! -name 'graph-main.cpp' ! -name 'benchmark-vaccination.cpp' ! -name 'benchmark-stepsize.cpp' ! -name 'benchmark-lp.cpp')
+COMMON_SOURCES = $(shell find $(SRC_DIR) -name '*.cpp' ! -name 'main.cpp' ! -name 'graph-main.cpp' ! -name 'benchmark-vaccination.cpp' ! -name 'benchmark-stepsize.cpp' ! -name 'benchmark-lp.cpp' ! -name 'main-dynamic-lp.cpp' ! -name 'main_dynamic.cpp')
 COMMON_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(COMMON_SOURCES))
 MAIN_SIM_OBJ = $(BUILD_DIR)/main.o
 MAIN_GRAPH_OBJ = $(BUILD_DIR)/graph-main.o
+MAIN_DYNAMIC_LP_OBJ = $(BUILD_DIR)/main-dynamic-lp.o
+MAIN_DYNAMIC_OBJ = $(BUILD_DIR)/main-dynamic.o
 
 
 all: $(EXEC_SIM) $(EXEC_GRAPH) $(EXEC_BENCHMARK_VACCINATION)
+
+dynamic-lp : $(COMMON_OBJECTS) $(BUILD_DIR)/main-dynamic-lp.o
+	@echo "Linking dynamic-lp executable..."
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $(BIN_DIR)/dynamic-lp $^ $(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
+	@echo "Dynamic LP build finished at $(BIN_DIR)/dynamic-lp"
 
 benchmark-lp : $(COMMON_OBJECTS) $(BUILD_DIR)/benchmark-lp.o
 	@echo "Linking benchmark-lp executable..."

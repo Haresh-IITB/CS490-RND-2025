@@ -13,11 +13,9 @@ struct Config {
 
     // -------- Graph parameters --------
     double alpha = 0.05;
-    double beta  = 0.30;
-    double cutoff_prob = 0.0;
-
-    int num_centers = 5;
-
+    double beta  = 0.20;
+    double cutoff_prob = 1e-3;
+    double prob_infect = 0.1;
     // -------- Experiment parameters --------
     std::vector<int> node_sizes;   // e.g. 64,128,256,512
     double initial_infected_percent = 0.10;
@@ -25,6 +23,8 @@ struct Config {
 
     int T = 10;           // number of topologies
     int stepSize = 1;     // dynamic step size 
+    int timegap = 3; 
+    int batches = 3;      // number of batches in dynamic strategy
     uint64_t seed = 42;
 
     // -------- Model --------
@@ -80,8 +80,6 @@ static inline bool load_config(const std::string &filename, Config &cfg) {
             cfg.beta = std::stod(value);
         else if (key == "cutoff_prob")
             cfg.cutoff_prob = std::stod(value);
-        else if (key == "num_centers")
-            cfg.num_centers = std::stoi(value);
 
         // -------- Experiment --------
         else if (key == "node_sizes")
@@ -96,7 +94,12 @@ static inline bool load_config(const std::string &filename, Config &cfg) {
             cfg.stepSize = std::stoi(value);
         else if (key == "seed")
             cfg.seed = static_cast<uint64_t>(std::stoull(value));
-
+        else if (key == "timegap")
+            cfg.timegap = std::stoi(value);
+        else if (key == "batches")
+            cfg.batches = std::stoi(value);
+        else if (key == "prob_infect")
+            cfg.prob_infect = std::stod(value);
         // -------- Model --------
         else if (key == "diffusion_model")
             cfg.diffusion_model = value;

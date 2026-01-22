@@ -12,7 +12,8 @@ int IC_Simulation(Graph &G,
                   const int &newVaccinatedNode,
                   const std::vector<bool> &Infected_Node,
                   const uint64_t &seed,
-                  const int &stepSize) ; 
+                  const int &stepSize,
+                  const double prob_infect) ; 
 
 
 int LinearThreshold_Simulator(

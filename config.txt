@@ -1,11 +1,10 @@
 # -------- Graph --------
-alpha=0.05
-beta=0.2
-cutoff_prob=0.0
-num_centers=5
-
+alpha=0.15
+beta=0.2s
+cutoff_prob=1e-3
+prob_infect=0.5
 # -------- Experiment --------
-node_sizes=2048
+node_sizes=256,512,1024,2048,4096,8192,16384,24000
 initial_infected_percent=0.10
 vaccination_budget_percent=0.10
 T=10
