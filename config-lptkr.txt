@@ -1,8 +1,8 @@
 # -------- Graph --------
-alpha=0.15
-beta=0.2s
+alpha=0.10
+beta=0.20
 cutoff_prob=1e-3
-prob_infect=0.5
+prob_infect=0.6
 # -------- Experiment --------
 node_sizes=256,512,1024,2048,4096,8192,16384,24000
 initial_infected_percent=0.10
@@ -10,6 +10,7 @@ vaccination_budget_percent=0.10
 T=10
 stepSize=0
 seed=42
+batches=10
 
 # -------- Model --------
 diffusion_model=IC

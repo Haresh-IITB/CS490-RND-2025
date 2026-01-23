@@ -1,18 +1,54 @@
 #include "waxman-graph.h"
 #include "dynamic-strategy.h"
 #include "dynamic-simulation.h"
-#include "config.h"
-#include <set>
 #include "simulation.h"
-#include <chrono>
-#include <iomanip>
-#include <sstream> 
+#include "config.h"
 #include "main-helper.h"
 
-double Prob_infect = 0.5 ; 
+std::vector<std::pair<int,int>> Run_Dynamic_Vaccination(
+    Graph &G,
+    const std::vector<int> &initial_infected,
+    const std::vector<int> &schedule, 
+    const int & time_interval,
+    const int & T,
+    const double & Prob_infect,
+    const int & step_size
+) {
+    int num_batches = schedule.size() ;
+    int time_id = 0 ; 
+    std::vector<bool> vaccinated_mask(G.nodes.size(), false);
+    std::vector<int> current_infected = initial_infected ;
+    std::vector<std::pair<int,int>> all_new_vaccines ; // pair of (node, time_id)
+
+    for(int i = 0 ; i<num_batches; ++i){
+        // Run the greedy vaccination algorithm to select schedule[i] nodes
+        std::vector<int> new_vaccines ;
+        Greedy_Vaccination_Dynamic(
+            G, 
+            schedule[i],
+            current_infected,
+            vaccinated_mask,
+            new_vaccines,
+            IC_Simulation,
+            step_size,
+            T,
+            Prob_infect
+        );  
+        
+        // Update the vaccinated mask and add to all_new_vaccines
+        for(auto v : new_vaccines){
+            vaccinated_mask[v] = true ;
+            all_new_vaccines.push_back({v, time_id}) ;
+        }
+
+        // Update the state of the base graph by simulatin infection spread for time_interval steps
+    }
+}
+
+
 
 int main() {
-    std::cout << "Program started: Dynamic LP Vaccination (Default Config)\n";
+    std::cout << "Program started: Dynamic Greedy Vaccination (Default Config)\n";
     
     Config cfg;
     if (!load_config("config-lptkr.txt", cfg)) {
@@ -20,17 +56,17 @@ int main() {
         return 1;
     }
 
-    Prob_infect = cfg.prob_infect ;
+    const double Prob_infect = cfg.prob_infect ;
 
     // Open the CSV file for writing resultsstd::ostringstream pct;
     std::ostringstream pct;
     pct << std::fixed << std::setprecision(2) << cfg.vaccination_budget_percent;
 
     std::ofstream csv(
-        "results/dynamic_lp_nodes_saved_" + pct.str() + ".csv"
+        "results/dynamic_greedy_nodes_saved_" + pct.str() + ".csv"
     );
     std::ofstream csv_time(
-        "results/dynamic_lp_time_taken_" + pct.str() + ".csv"
+        "results/dynamic_greedy_time_taken_" + pct.str() + ".csv"
     );
     csv << "NodeSize,Uniform,FrontLoaded,BackLoaded,StaticOneShot,WithoutVaccine\n";
     csv << std::fixed << std::setprecision(2);
@@ -90,37 +126,32 @@ int main() {
 
         std::vector<int> initial_infected = sample_initial_infected(G, cfg.initial_infected_percent, cfg.seed);
         std::cout << "Initial infected nodes sampled: "
-          << initial_infected.size() << "\n";
-
+        << initial_infected.size() << "\n";
+        
         std::vector<StrategyResult> results;
         std::vector<uint64_t> seeds ;
         for(int i=0; i<cfg.T; ++i){
             seeds.push_back(cfg.seed + i);
         }
-
+    
         for(auto batchType : {ScheduleType::UNIFORM, ScheduleType::FRONT_LOADED, ScheduleType::BACK_LOADED, ScheduleType::STATIC_ONE_SHOT}){
             std::vector<int> schedule = generate_budget_schedule(total_budget, cfg.batches, batchType);
             auto t1 = std::chrono::high_resolution_clock::now();
-            std::vector<std::pair<int,int>> vaccines = run_rolling_horizon_strategy(
+            std::vector<std::pair<int,int>> vaccines = Run_Dynamic_Vaccination(
                 G,
-                initial_infected,
                 schedule,
                 time_interval,
-                cfg.T, // samples per step
-                Prob_infect
+                initial_infected
             );
+
             auto t2 = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = t2 - t1;
             std::cout << "Total vaccines selected: "
             << vaccines.size() << "\n";
 
-            // Extract only the vaccines 
-            std::vector<int> only_vaccine = extractVaccineNode(vaccines) ; 
-
             int saved_count = run_baseline_with_seeds(
                 G,
                 initial_infected,
-                //only_vaccine, 
                 vaccines,
                 IC_Simulation_test,
                 seeds,

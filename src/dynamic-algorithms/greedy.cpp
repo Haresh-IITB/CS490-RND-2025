@@ -14,10 +14,12 @@ void Greedy_Vaccination_Dynamic(
                             const int &,
                             const std::vector<bool> &,
                             const uint64_t &,
-                            const int &
+                            const int &,
+                            const double 
                         )> Simulator,
     int stepSize,
-    int T 
+    int T,
+    const double & Prob_infect
 ) {
     int N = G.nodes.size();
     std::vector<bool> Vaccinated_Node = pre_vaccinated_mask;
@@ -41,7 +43,7 @@ void Greedy_Vaccination_Dynamic(
 
             long long current_saved = 0;
             for (int t = 0; t < T; ++t) {
-                current_saved += Simulator(G, Vaccinated_Node, u, Infected_Node, sim_seeds[t], stepSize);
+                current_saved += Simulator(G, Vaccinated_Node, u, Infected_Node, sim_seeds[t], stepSize, Prob_infect);
             }
 
             double gain = (double)(current_saved);

@@ -175,14 +175,14 @@ std::vector<int> solve_lp_and_pick_new(
 
 
 
-std::vector<int> run_rolling_horizon_strategy(
+std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
     Graph &base_graph,                  
     std::vector<int> initial_infected,
     const std::vector<int> &budget_schedule, 
     int time_step_gap,
     int num_samples_per_step,
     double prob_infect
-) {
+) { 
     int N = base_graph.nodes.size();
     
     // Global State
@@ -190,8 +190,9 @@ std::vector<int> run_rolling_horizon_strategy(
     // This tracks the "Real World" infection state
     std::vector<int> current_infected_list = initial_infected; 
 
-    std::vector<int> all_vaccinated_nodes;
+    std::vector<std::pair<int,int>> all_vaccinated_nodes;
     int current_cumulative_budget = 0;
+    int time_id = 0 ; 
 
     for (size_t t = 0; t < budget_schedule.size(); ++t) {
         int marginal_budget = budget_schedule[t];
@@ -229,9 +230,15 @@ std::vector<int> run_rolling_horizon_strategy(
         // 4. ACT: Apply vaccines
         for (int v : new_vaccines) {
             vaccinated_mask[v] = true;
-            all_vaccinated_nodes.push_back(v);
+            all_vaccinated_nodes.push_back({v,time_id});
         }
         std::cout << "    Vaccinated " << new_vaccines.size() << " nodes." << std::endl;
+
+        // If no new vaccinations, returnearly
+        if(new_vaccines.empty() && marginal_budget > 0) {
+            std::cout << "No new vaccinations possible. Ending early.\n";
+            break;
+        }
 
         // 5. OBSERVE: Simulate "Reality" 
         // We use the base_graph (or a specific realization) to roll the dice 
@@ -247,6 +254,7 @@ std::vector<int> run_rolling_horizon_strategy(
 
         // 6. EVOLVE: Move Nodes
         base_graph.simulate_movement(time_step_gap);
+        time_id  += time_step_gap ; // Increaseing the time for next vaccination record 
     }
 
     return all_vaccinated_nodes;

@@ -22,13 +22,15 @@ void Greedy_Vaccination_Dynamic(
                             const int &,
                             const std::vector<bool> &,
                             const uint64_t &,
-                            const int &
+                            const int &,
+                            const double 
                         )> Simulator,
     int stepSize,
-    int T 
+    int T,
+    const double & Prob_infect
 );
 
-std::vector<int> run_rolling_horizon_strategy(
+std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
     Graph &base_graph,                  
     std::vector<int> initial_infected,
     const std::vector<int> &budget_schedule, 
