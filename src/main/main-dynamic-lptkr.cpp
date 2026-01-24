@@ -28,13 +28,13 @@ int main() {
     pct << std::fixed << std::setprecision(2) << cfg.vaccination_budget_percent;
 
     std::filesystem::create_directories("results");
-    std::filesystem::create_directories("results/dynamic_lptkr");
+    std::filesystem::create_directories("results/dynamic_lptkr_" + std::string((cfg.diffusion_model == InfectionModel::IC) ? "IC" : "LT"));
 
     std::ofstream csv(
-        "results/dynamic_lptkr/nodes_saved_" + pct.str() + ".csv"
+        "results/dynamic_lptkr_" + std::string((cfg.diffusion_model == InfectionModel::IC) ? "IC" : "LT") + "/nodes_saved_" + pct.str() + ".csv"
     );
     std::ofstream csv_time(
-        "results/dynamic_lptkr/time_taken_" + pct.str() + ".csv"
+        "results/dynamic_lptkr_" + std::string((cfg.diffusion_model == InfectionModel::IC) ? "IC" : "LT") + "/time_taken_" + pct.str() + ".csv"
     );
     csv << "NodeSize,Uniform,FrontLoaded,BackLoaded,StaticOneShot,WithoutVaccine\n";
     csv << std::fixed << std::setprecision(2);
@@ -111,7 +111,8 @@ int main() {
                 schedule,
                 time_interval,
                 cfg.T, // samples per step
-                Prob_infect
+                Prob_infect,
+                cfg.diffusion_model
             );
             auto t2 = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double> elapsed = t2 - t1;
@@ -126,7 +127,7 @@ int main() {
                 initial_infected,
                 //only_vaccine, 
                 vaccines,
-                IC_Simulation_test,
+                (cfg.diffusion_model == InfectionModel::IC) ? IC_Simulation_test : LT_Simulation_test,
                 seeds,
                 cfg.stepSize,
                 Prob_infect
@@ -150,7 +151,7 @@ int main() {
             G,
             initial_infected,
             {},
-            IC_Simulation_test,
+            (cfg.diffusion_model == InfectionModel::IC) ? IC_Simulation_test : LT_Simulation_test,
             seeds,
             cfg.stepSize,
             Prob_infect

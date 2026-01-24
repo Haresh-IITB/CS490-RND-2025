@@ -39,7 +39,7 @@ void simulate_infection_spread_LT(
                     influence[v] += w ;
 
                     // Check threshold
-                    if (influence[v] >= G.nodesThreshold[v]) {
+                    if (influence[v] >= G.nodesThreshold[v] && P < uni(rng)) {
                         infected_mask[v] = true ;
                         next_frontier.push_back(v);
                     }
@@ -62,7 +62,8 @@ int LT_Simulation_test(
     const std::vector<std::pair<int,int>> &Vaccinated_Node, // (node, time_id)
     const std::vector<bool> &Infected_Node,
     const uint64_t &seed,
-    const int &stepSize
+    const int &stepSize,
+    const double prob_infect
 ) {
     // Copy graph
     Graph::Params params_copy = G.params;
@@ -106,6 +107,9 @@ int LT_Simulation_test(
     int steps = 0;
     int time = 0;
 
+    std::mt19937 rng(seed);
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
+
     constexpr double INFLUENCE_SCALE = 1.0;
 
     while (!frontier.empty()) {
@@ -137,7 +141,7 @@ int LT_Simulation_test(
 
                 influence[v] += w;
 
-                if (influence[v] >= Gc.nodesThreshold[v]) {
+                if (influence[v] >= Gc.nodesThreshold[v] && prob_infect < uni(rng)) {
                     active[v] = true;
                     next_frontier.push(v);
                     activeCount++;
@@ -160,7 +164,8 @@ int LT_Simulation_search(
     const std::vector<bool> &Infected_Node,
     const std::vector<int> &current_infected,
     const uint64_t &seed,
-    const int &stepSize
+    const int &stepSize,
+    const double prob_infect
 ) {
     // Copy graph
     Graph::Params params_copy = G.params;
@@ -180,6 +185,9 @@ int LT_Simulation_search(
     if (newVaccinatedNode != -1)
         immune[newVaccinatedNode] = true;
 
+
+    std::mt19937 rng(seed);
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
 
     // Initial active nodes
     std::queue<int> frontier;
@@ -217,7 +225,7 @@ int LT_Simulation_search(
 
                 influence[v] += w;
 
-                if (influence[v] >= Gc.nodesThreshold[v]) {
+                if (influence[v] >= Gc.nodesThreshold[v] && prob_infect < uni(rng)) {
                     active[v] = true;
                     next_frontier.push(v);
                     activeCount++;

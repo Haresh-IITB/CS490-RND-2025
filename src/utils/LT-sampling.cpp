@@ -39,14 +39,15 @@ AdjList sample_lt_live_edge_graph(
 std::vector<AdjList> sample_lt_live_edge_topologies(
     const Graph &G,
     int S,
-    uint64_t seed)
+    uint64_t seed,
+    double INFECT_PROB = 0.2)
 {
     std::vector<AdjList> samples;
     samples.reserve(S);
 
     for (int s = 0; s < S; s++) {
         samples.push_back(
-            sample_lt_live_edge_graph(G, seed + s)
+            sample_lt_live_edge_graph(G, seed + s, INFECT_PROB)
         );
     }
 

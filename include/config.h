@@ -8,6 +8,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstdint>
+#include "dynamic-simulation.h"
 
 struct Config {
 
@@ -28,7 +29,7 @@ struct Config {
     uint64_t seed = 42;
 
     // -------- Model --------
-    std::string diffusion_model = "IC"; // "IC" or "LT"
+    InfectionModel diffusion_model = InfectionModel::IC;
 };
 
 
@@ -102,7 +103,7 @@ static inline bool load_config(const std::string &filename, Config &cfg) {
             cfg.prob_infect = std::stod(value);
         // -------- Model --------
         else if (key == "diffusion_model")
-            cfg.diffusion_model = value;
+            cfg.diffusion_model = (value == "IC") ? InfectionModel::IC : InfectionModel::LT;
     }
 
     // -------- Sanity checks --------
@@ -111,8 +112,8 @@ static inline bool load_config(const std::string &filename, Config &cfg) {
         return false;
     }
 
-    if (cfg.diffusion_model != "IC" &&
-        cfg.diffusion_model != "LT") {
+    if (cfg.diffusion_model != InfectionModel::IC &&
+        cfg.diffusion_model != InfectionModel::LT) {
         std::cerr << "Error: diffusion_model must be IC or LT\n";
         return false;
     }

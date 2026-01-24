@@ -11,8 +11,9 @@ using AdjList = std::vector<std::vector<int>>;
 std::vector<AdjList> sample_lt_live_edge_topologies(
     const Graph &G,
     int S,
-    uint64_t seed) ; 
-
+    uint64_t seed,
+    double INFECT_PROB = 0.2) ; 
+    
 std::vector<AdjList> sample_ic_live_edge_topologies(
     const Graph &G,
     int S,

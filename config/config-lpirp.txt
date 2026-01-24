@@ -4,7 +4,7 @@ beta=0.20
 cutoff_prob=1e-3
 prob_infect=0.6
 # -------- Experiment --------
-node_sizes=64,128,256,512,1024,2048,4096,8192,16000,32500
+node_sizes=256,512,1024,2048,4096,8192,16384,24000,50000
 initial_infected_percent=0.10
 vaccination_budget_percent=0.10
 T=10

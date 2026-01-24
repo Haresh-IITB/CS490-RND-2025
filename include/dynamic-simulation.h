@@ -54,7 +54,8 @@ int LT_Simulation_test(
     const std::vector<std::pair<int,int>> &Vaccinated_Node, // (node, time_id)
     const std::vector<bool> &Infected_Node,
     const uint64_t &seed,
-    const int &stepSize
+    const int &stepSize,
+    const double prob_infect
 ) ;
 
 int LT_Simulation_search(
@@ -64,7 +65,8 @@ int LT_Simulation_search(
     const std::vector<bool> &Infected_Node,
     const std::vector<int> &current_infected,
     const uint64_t &seed,
-    const int &stepSize
+    const int &stepSize,
+    const double prob_infect
 ) ;
 
 #endif // DYNAMIC_SIMULATION_H

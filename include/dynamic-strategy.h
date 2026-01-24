@@ -4,6 +4,7 @@
 #include "waxman-graph.h"
 #include <iostream>
 #include <iomanip>
+#include "dynamic-simulation.h"
 
 enum class RoundingMethod {
     TKR,
@@ -38,7 +39,8 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
     const std::vector<int> &budget_schedule, 
     int time_step_gap,
     int num_samples_per_step,
-    double prob_infect
+    double prob_infect,
+    InfectionModel model = IC 
 ) ;
 
 void Local_Search(
@@ -95,7 +97,8 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy_irp(
     const std::vector<int> &budget_schedule, 
     int time_step_gap,
     int num_samples_per_step,
-    double prob_infect
+    double prob_infect,
+    InfectionModel model = IC
 ) ;
 
 #endif

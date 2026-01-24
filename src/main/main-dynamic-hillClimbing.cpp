@@ -12,7 +12,8 @@ std::vector<std::pair<int,int>> Run_Dynamic_Vaccination(
     const int & time_interval,
     const int & T,
     const double & Prob_infect,
-    const int & step_size
+    const int & step_size,
+    InfectionModel model = IC
 ) {
     // Deep copy the graph Gc
     Graph::Params p = Gc.params ;
@@ -43,7 +44,7 @@ std::vector<std::pair<int,int>> Run_Dynamic_Vaccination(
             infected_mask,
             vaccinated_mask,
             new_vaccines,
-            IC_Simulation_search,
+            (model == IC) ? IC_Simulation_search : LT_Simulation_search,
             step_size,
             T,
             100,
@@ -57,15 +58,26 @@ std::vector<std::pair<int,int>> Run_Dynamic_Vaccination(
         }
 
         //Simulate the infection spread 
-        simulate_infection_spread_IC(
-            G,
-            current_infected,
-            infected_mask,
-            vaccinated_mask,
-            time_interval,
-            5000 + time_id,
-            Prob_infect
-        );
+        if (model == IC)
+            simulate_infection_spread_IC(
+                G,
+                current_infected,
+                infected_mask,
+                vaccinated_mask,
+                time_interval,
+                5000 + time_id,
+                Prob_infect
+            );
+        else
+            simulate_infection_spread_LT(
+                G,
+                current_infected,
+                infected_mask,
+                vaccinated_mask,
+                time_interval,
+                5000 + time_id,
+                Prob_infect
+            );
 
         // Update time_id and the graph 
         G.simulate_movement(time_interval);
@@ -93,13 +105,13 @@ int main() {
     pct << std::fixed << std::setprecision(2) << cfg.vaccination_budget_percent;
 
     std::filesystem::create_directories("results");
-    std::filesystem::create_directories("results/dynamic_hc");
+    std::filesystem::create_directories("results/dynamic_hc_" + std::string((cfg.diffusion_model == IC) ? "IC" : "LT"));
 
     std::ofstream csv(
-        "results/dynamic_hc/nodes_saved_" + pct.str() + ".csv"
+        "results/dynamic_hc_" + std::string((cfg.diffusion_model == IC) ? "IC" : "LT") + "/nodes_saved_" + pct.str() + ".csv"
     );
     std::ofstream csv_time(
-        "results/dynamic_hc/time_taken_" + pct.str() + ".csv"
+        "results/dynamic_hc_" + std::string((cfg.diffusion_model == IC) ? "IC" : "LT") + "/time_taken_" + pct.str() + ".csv"
     );
     csv << "NodeSize,Uniform,FrontLoaded,BackLoaded,StaticOneShot,WithoutVaccine\n";
     csv << std::fixed << std::setprecision(2);
@@ -177,7 +189,8 @@ int main() {
                 time_interval,
                 cfg.T,
                 Prob_infect,
-                cfg.stepSize
+                cfg.stepSize,
+                cfg.diffusion_model
             );
 
             auto t2 = std::chrono::high_resolution_clock::now();
@@ -189,7 +202,7 @@ int main() {
                 G,
                 initial_infected,
                 vaccines,
-                IC_Simulation_test,
+                (cfg.diffusion_model == IC) ? IC_Simulation_test : LT_Simulation_test,
                 seeds,
                 cfg.stepSize,
                 Prob_infect
@@ -213,7 +226,7 @@ int main() {
             G,
             initial_infected,
             {},
-            IC_Simulation_test,
+            (cfg.diffusion_model == IC) ? IC_Simulation_test : LT_Simulation_test,
             seeds,
             cfg.stepSize,
             Prob_infect

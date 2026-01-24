@@ -2,7 +2,7 @@
 #include "strategy.h" // Assuming this holds your Graph/RoundingMethod definitions
 #include "gurobi_c++.h"
 #include "sampler.h"
-
+#include "dynamic-simulation.h"
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
@@ -12,8 +12,7 @@
 #include <random>
 #include <set>
 
-
-static void simulate_infection_spread(
+static void simulate_infection_spread_ic(
     const Graph &G, 
     std::vector<int> &infected_list, // Input/Output
     const std::vector<bool> &vaccinated_mask, 
@@ -48,6 +47,64 @@ static void simulate_infection_spread(
 
     // Update the master list
     infected_list.assign(newly_infected.begin(), newly_infected.end()); // Contains all the infected nodes after simulation
+}
+
+static void simulate_infection_spread_lt(
+    const Graph &G,
+    std::vector<int> &infected_list,
+    const std::vector<bool> &vaccinated_mask,
+    int steps,
+    uint64_t seed,
+    double prob_infect
+){
+    const double P = prob_infect ; // Infection probability factor
+    std::mt19937 rng(seed);
+    std::uniform_real_distribution<double> uni(0.0, 1.0);
+    
+    std::vector<double> influence(G.nodes.size(), 0.0);
+    
+    std::unordered_set<int> newly_infected(infected_list.begin(), infected_list.end());
+    std::vector<int> frontier = infected_list;
+
+    for (int t = 0; t < steps; ++t) {
+        std::vector<int> next_frontier;
+        for (int u : frontier) {
+            for (int v : G.adj_list[u]) {
+                // If v is susceptible (not infected, not vaccinated)
+                if (newly_infected.find(v) == newly_infected.end() && !vaccinated_mask[v]) {
+                    double w = 1.0 / std::max(1, (int)G.adj_list[v].size());
+                    influence[v] += w ;
+
+                    // Check threshold
+                    if (influence[v] >= G.nodesThreshold[v]) {
+                        newly_infected.insert(v);
+                        next_frontier.push_back(v);
+                    }
+                }                
+            }
+        }
+        frontier = next_frontier;
+        if (frontier.empty()) break;
+    }
+
+    // Update the master list
+    infected_list.assign(newly_infected.begin(), newly_infected.end()); // Contains all the infected nodes after simulation
+}
+
+static void simulate_infection_spread(
+    const Graph &G, 
+    std::vector<int> &infected_list, // Input/Output
+    const std::vector<bool> &vaccinated_mask, 
+    int steps, 
+    uint64_t seed,
+    double prob_infect,
+    InfectionModel model = IC
+) {
+    if(model == IC) {
+        simulate_infection_spread_ic(G, infected_list, vaccinated_mask, steps, seed, prob_infect);
+    } else if(model == LT) {
+        simulate_infection_spread_lt(G, infected_list, vaccinated_mask, steps, seed, prob_infect);
+    }
 }
 
 static GRBEnv GLOBAL_ENV;
@@ -182,7 +239,8 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
     const std::vector<int> &budget_schedule, 
     int time_step_gap,
     int num_samples_per_step,
-    double prob_infect
+    double prob_infect,
+    InfectionModel model = IC 
 ) { 
     // Copy the graph before mutating it 
     Graph::Params params_copy = base_graph.params;
@@ -218,7 +276,11 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
                   << " | Budget: " << marginal_budget << std::endl;
 
         // 1. SAMPLE: Generate topologies (Prediction of connectivity)
-        auto samples = sample_ic_live_edge_topologies(Gc, num_samples_per_step, 42 + t, prob_infect);
+        std::vector<AdjList> samples;
+        if (model == IC)
+            samples = sample_ic_live_edge_topologies(Gc, num_samples_per_step, 42 + t, prob_infect);
+        else if (model == LT)
+            samples = sample_lt_live_edge_topologies(Gc, num_samples_per_step, 42 + t, prob_infect);
 
         // 2. OPTIMIZE: Run LP to find best NEW vaccines
         LPModel lp = build_lp_model(
@@ -260,7 +322,8 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
             vaccinated_mask,        // Vaccines protect nodes
             time_step_gap,          // How long we wait
             100 + t ,                // Random seed
-            prob_infect
+            prob_infect,
+            model                   // Infection Model
         );
 
         // 6. EVOLVE: Move Nodes
