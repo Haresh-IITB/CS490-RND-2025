@@ -139,6 +139,11 @@ void Graph::generate_nodes() {
     }
     
     adj_list.assign(nodes.size(), std::unordered_set<int>());
+
+    // Assign a random threshold to each node
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        nodesThreshold[i] = rng_gen->get_unif(0.1, 1.0);
+    }
 }
 
 

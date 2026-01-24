@@ -22,6 +22,7 @@
 #define DBG(x) do {} while(0)
 #endif
 
+
 int LinearThreshold_Simulator(
     Graph & G,
     const std::vector<bool> & Vaccinated_Node,
@@ -42,70 +43,59 @@ int LinearThreshold_Simulator(
     Gc.nodesThreshold = G.nodesThreshold;
     Gc.build_spatial_index();
     
-    // Generate the thershold based on the seed 
-    for(int i = 0; i < (int)Gc.nodes.size(); i++) {
-        Gc.nodesThreshold[i] = Gc.rng_gen->get_unif();
-    }
-
     const int N = G.nodes.size();
+
     std::vector<bool> Active_Node(N, false);
     std::vector<double> Accumulated_Influence(N, 0.0);
 
-    // Immune Mask 
+    // Immune mask
     std::vector<int> immune(N, 0);
     for (int i = 0; i < (int)Vaccinated_Node.size() && i < N; i++)
         if (Vaccinated_Node[i]) immune[i] = 1;
-    
-    if(newVaccinatedNode != -1)
+
+    if (newVaccinatedNode != -1)
         immune[newVaccinatedNode] = 1;
 
-    int vaccinatedCount = 0;
-    for (int i = 0; i < N; ++i)
-        if (immune[i]) vaccinatedCount++;
-
-    DBG("[LT] Total nodes=" << N
-        << " vaccinated=" << vaccinatedCount);
-
     // Initialize active nodes
-    for (int u = 0; u < N; ++u) {
-        if (Infected_Node[u] && !Vaccinated_Node[u]) {
-            Active_Node[u] = true;
-        }
-    }
-
-    // Use a BFS approach for influence propagation
     std::queue<int> frontier;
     for (int u = 0; u < N; ++u) {
-        if (Active_Node[u]) {
+        if (Infected_Node[u] && !immune[u]) {
+            Active_Node[u] = true;
             frontier.push(u);
         }
     }
 
     int activeCount = frontier.size();
     int steps = 0;
+    int time  = 0;   
 
     DBG("[LT] Initial active nodes=" << activeCount);
 
-    while(!frontier.empty()) {
-        std::queue<int> next_frontier;
+    while (!frontier.empty()) {
 
         DBG("[LT] Step " << steps
             << " | frontier size=" << frontier.size());
 
-        if(steps > 0 && stepSize > 0 && steps % stepSize == 0) {
-            DBG("[LT] Simulating movement at step " << steps);
+        std::queue<int> next_frontier;
+
+        // 🔹 Dynamic movement (MATCHES IC)
+        if (steps > 0 && stepSize > 0 && steps % stepSize == 0) {
+            DBG("[LT] Movement triggered at step " << steps);
             Gc.simulate_movement(stepSize);
+            time++;   // 🔹 advance logical time
         }
 
-        while(!frontier.empty()) {
+        while (!frontier.empty()) {
             int u = frontier.front();
             frontier.pop();
 
             for (int v : Gc.adj_list[u]) {
                 if (Active_Node[v] || immune[v]) continue;
 
-                // Compute influence weight from u to v
-                double weight = 1.0 / Gc.adj_list[v].size();
+                // Influence weight
+                double weight =
+                    1.0 / std::max(1, (int)Gc.adj_list[v].size());
+
                 Accumulated_Influence[v] += weight;
 
                 DBG("[LT] u=" << u
@@ -113,25 +103,27 @@ int LinearThreshold_Simulator(
                     << " | influence=" << Accumulated_Influence[v]
                     << " threshold=" << Gc.nodesThreshold[v]);
 
-                if(Accumulated_Influence[v] >= Gc.nodesThreshold[v]) {
+                if (Accumulated_Influence[v] >= Gc.nodesThreshold[v]) {
                     Active_Node[v] = true;
                     next_frontier.push(v);
                     activeCount++;
 
                     DBG("[LT] Node " << v
-                        << " ACTIVATED at step " << steps);
+                        << " ACTIVATED at step "
+                        << steps << " time=" << time);
                 }
             }
         }
 
-        steps++;
         frontier = next_frontier;
+        steps++;
     }
 
-    DBG("[LT] Simulation end | total active="
+    DBG("[LT] Simulation end | active="
         << activeCount
-        << " inactive=" << (N - activeCount)
-        << " steps=" << steps);
+        << " saved=" << (N - activeCount)
+        << " steps=" << steps
+        << " time=" << time);
 
     return N - activeCount;
 }

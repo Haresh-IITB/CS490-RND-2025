@@ -14,98 +14,89 @@ HOMEBREW_PREFIX := /opt/homebrew
 CXXFLAGS += -I$(HOMEBREW_PREFIX)/include
 LDFLAGS  += -L$(HOMEBREW_PREFIX)/lib -lglpk -Wl,-rpath,$(HOMEBREW_PREFIX)/lib
 
-EXEC_SIM = $(BIN_DIR)/simulation
-EXEC_GRAPH = $(BIN_DIR)/graph-main
-EXEC_BENCHMARK_VACCINATION = $(BIN_DIR)/benchmark-vaccination
-EXEC_BENCHMARK_STEPSIZE = $(BIN_DIR)/benchmark-stepsize
-EXEC_BENCHMARK_LP = $(BIN_DIR)/benchmark-lp
+EXEC_GRAPH                 = $(BIN_DIR)/graph-main
+EXEC_BENCHMARK             = $(BIN_DIR)/benchmark-vaccination
+EXEC_BENCHMARK_STEPSIZE    = $(BIN_DIR)/benchmark-stepsize
+EXEC_BENCHMARK_LP          = $(BIN_DIR)/benchmark-lp
+EXEC_DYNAMIC_LPTKR         = $(BIN_DIR)/dynamic-lptkr
+EXEC_DYNAMIC_LPIRP         = $(BIN_DIR)/dynamic-lpirp
+EXEC_DYNAMIC_GREEDY        = $(BIN_DIR)/dynamic-greedy
+EXEC_DYNAMIC_LOCALSEARCH	= $(BIN_DIR)/dynamic-localSearch
+EXEC_DYNAMIC_HILLCLIMBING  = $(BIN_DIR)/dynamic-hillclimbing
 
-COMMON_SOURCES = $(shell find $(SRC_DIR) -name '*.cpp' ! -name 'main.cpp' ! -name 'graph-main.cpp' ! -name 'benchmark-vaccination.cpp' ! -name 'benchmark-stepsize.cpp' ! -name 'benchmark-lp.cpp' ! -name 'main-dynamic-lp.cpp' ! -name 'main_dynamic.cpp')
-COMMON_OBJECTS = $(patsubst $(SRC_DIR)/%.cpp, $(BUILD_DIR)/%.o, $(COMMON_SOURCES))
-MAIN_SIM_OBJ = $(BUILD_DIR)/main.o
-MAIN_GRAPH_OBJ = $(BUILD_DIR)/graph-main.o
-MAIN_DYNAMIC_LP_OBJ = $(BUILD_DIR)/main-dynamic-lp.o
-MAIN_DYNAMIC_OBJ = $(BUILD_DIR)/main-dynamic.o
+COMMON_SOURCES := $(shell find $(SRC_DIR) \
+    -path $(SRC_DIR)/main -prune -o \
+	-path $(SRC_DIR)/algorithms -prune -o \
+    -name '*.cpp' -print)
+
+COMMON_OBJECTS := $(patsubst $(SRC_DIR)/%.cpp, \
+                              $(BUILD_DIR)/%.o, \
+                              $(COMMON_SOURCES))
 
 
-all: $(EXEC_SIM) $(EXEC_GRAPH) $(EXEC_BENCHMARK_VACCINATION)
+MAIN_GRAPH_OBJ              = $(BUILD_DIR)/main/graph-main.o
+MAIN_BENCHMARK_OBJ          = $(BUILD_DIR)/main/benchmark-vaccination.o
+MAIN_BENCHMARK_STEPSIZE_OBJ = $(BUILD_DIR)/main/benchmark-stepsize.o
+MAIN_BENCHMARK_LP_OBJ       = $(BUILD_DIR)/main/benchmark-lp.o
+MAIN_DYNAMIC_LPTKR_OBJ      = $(BUILD_DIR)/main/main-dynamic-lptkr.o
+MAIN_DYNAMIC_LPIRP_OBJ      = $(BUILD_DIR)/main/main-dynamic-lpirp.o
+MAIN_DYNAMIC_GREEDY_OBJ     = $(BUILD_DIR)/main/main-dynamic-greedy.o
+MAIN_DYNAMIC_HILLCLIMBING_OBJ = $(BUILD_DIR)/main/main-dynamic-hillClimbing.o
+MAIN_DYNAMIC_LOCALSEARCH_OBJ = $(BUILD_DIR)/main/main-dynamic-localSearch.o
 
-dynamic-lp : $(COMMON_OBJECTS) $(BUILD_DIR)/main-dynamic-lp.o
-	@echo "Linking dynamic-lp executable..."
+
+
+all: dynamic-lptkr dynamic-lpirp dynamic-greedy dynamic-hillclimbing dynamic-localSearch
+
+graph: $(COMMON_OBJECTS) $(MAIN_GRAPH_OBJ)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $(BIN_DIR)/dynamic-lp $^ $(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
-	@echo "Dynamic LP build finished at $(BIN_DIR)/dynamic-lp"
+	$(CXX) $(CXXFLAGS) -o $(EXEC_GRAPH) $^ $(LDFLAGS)
 
-benchmark-lp : $(COMMON_OBJECTS) $(BUILD_DIR)/benchmark-lp.o
-	@echo "Linking benchmark-lp executable..."
+benchmark: $(COMMON_OBJECTS) $(MAIN_BENCHMARK_OBJ)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $(EXEC_BENCHMARK_LP) $^ $(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
-	@echo "Benchmark LP build finished at $(EXEC_BENCHMARK_LP)"
+	$(CXX) $(CXXFLAGS) -o $(EXEC_BENCHMARK) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
 
-benchmark : $(COMMON_OBJECTS) $(BUILD_DIR)/benchmark-vaccination.o
-	@echo "Linking benchmark-vaccination executable..."
+benchmark-stepsize: $(COMMON_OBJECTS) $(MAIN_BENCHMARK_STEPSIZE_OBJ)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $(EXEC_BENCHMARK_VACCINATION) $^ $(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
-	@echo "Benchmark vaccination build finished at $(EXEC_BENCHMARK_VACCINATION)"
+	$(CXX) $(CXXFLAGS) -o $(EXEC_BENCHMARK_STEPSIZE) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
 
-benchmark-stepsize : $(COMMON_OBJECTS) $(BUILD_DIR)/benchmark-stepsize.o
-	@echo "Linking benchmark-stepsize executable..."
+benchmark-lp: $(COMMON_OBJECTS) $(MAIN_BENCHMARK_LP_OBJ)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $(EXEC_BENCHMARK_STEPSIZE) $^ $(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
-	@echo "Benchmark stepsize build finished at $(EXEC_BENCHMARK_STEPSIZE)"
+	$(CXX) $(CXXFLAGS) -o $(EXEC_BENCHMARK_LP) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
 
-
-$(EXEC_SIM): $(COMMON_OBJECTS) $(MAIN_SIM_OBJ)
-	@echo "Linking simulation executable..."
+dynamic-lptkr: $(COMMON_OBJECTS) $(MAIN_DYNAMIC_LPTKR_OBJ)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
-	@echo "Simulation build finished at $(EXEC_SIM)"
-
-$(EXEC_GRAPH): $(COMMON_OBJECTS) $(MAIN_GRAPH_OBJ)
-	@echo "Linking graph-main executable..."
+	$(CXX) $(CXXFLAGS) -o $(EXEC_DYNAMIC_LPTKR) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
+	
+dynamic-lpirp: $(COMMON_OBJECTS) $(MAIN_DYNAMIC_LPIRP_OBJ)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
-	@echo "Graph build finished at $(EXEC_GRAPH)"
+	$(CXX) $(CXXFLAGS) -o $(EXEC_DYNAMIC_LPIRP) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
+
+dynamic-greedy: $(COMMON_OBJECTS) $(MAIN_DYNAMIC_GREEDY_OBJ)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $(EXEC_DYNAMIC_GREEDY) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread
+
+dynamic-hillclimbing: $(COMMON_OBJECTS) $(MAIN_DYNAMIC_HILLCLIMBING_OBJ)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $(EXEC_DYNAMIC_HILLCLIMBING) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread	
+	
+dynamic-localSearch: $(COMMON_OBJECTS) $(MAIN_DYNAMIC_LOCALSEARCH_OBJ)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $(EXEC_DYNAMIC_LOCALSEARCH) $^ \
+		$(LDFLAGS) -I$(INCLUDES_GUROBI) $(CPPLIB) -lm -ldl -lpthread	
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c -o $@ $^ -I$(INCLUDES_GUROBI) 
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -I$(INCLUDES_GUROBI) -c -o $@ $<
 
-test_greedy_ic:
-	g++ -std=c++17 -O0 -g \
-		src/test_greedy_ic.cpp \
-		src/graphs/waxman-graph.cpp \
-		src/models/Independent-cascade.cpp \
-		src/algorithms/greedy.cpp \
-		src/utils/Random_number_generator.cpp \
-		src/utils/SpatialGrid.cpp \
-		-Iinclude \
-		-o bin/test_greedy_ic
-
-test_greedy_lt:
-	g++ -std=c++17 -O0 -g \
-		src/test_greedy_ic.cpp \
-		src/graphs/waxman-graph.cpp \
-		src/models/Linear-threshold.cpp \
-		src/algorithms/greedy.cpp \
-		src/utils/Random_number_generator.cpp \
-		src/utils/SpatialGrid.cpp \
-		-Iinclude \
-		-o bin/test_greedy_ic
-
-test_pg_lt:
-	g++ -std=c++17 -O0 -g \
-		src/test_pg_ic.cpp \
-		src/graphs/waxman-graph.cpp \
-		src/models/Linear-threshold.cpp \
-		src/algorithms/page-rank.cpp \
-		src/utils/Random_number_generator.cpp \
-		src/utils/SpatialGrid.cpp \
-		-Iinclude \
-		-o bin/test_pg_lt
 clean:
-	@echo "Cleaning build files..."
-	rm -rf $(BIN_DIR) $(BUILD_DIR)
-	@echo "Clean complete."
+	rm -rf $(BUILD_DIR) $(BIN_DIR)
 
-.PHONY: all clean
+.PHONY: all clean graph benchmark benchmark-stepsize benchmark-lp dynamic-lptkr dynamic-lpirp dynamic-greedy dynamic-hillclimbing dynamic-localSearch

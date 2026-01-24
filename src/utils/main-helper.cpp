@@ -65,7 +65,7 @@ std::vector<int> generate_budget_schedule(int total_k, int steps, ScheduleType t
     return schedule;
 }
 
-static int run_baseline(
+int run_baseline(
     Graph &G,
     const std::vector<int> &initial_infected,
     const std::vector<int> &initial_vaccinated,
@@ -87,7 +87,7 @@ static int run_baseline(
     return saved_cnt; // return number of saved nodes 
 }
 
-static int run_baseline_with_seeds(
+int run_baseline_with_seeds(
     Graph &G,
     const std::vector<int> &initial_infected,
     const std::vector<int> &initial_vaccinated,
@@ -114,7 +114,7 @@ static int run_baseline_with_seeds(
 }
 
 // Testing the vaccination under dynamic distribution 
-static int run_baseline(
+int run_baseline(
     Graph &G,
     const std::vector<int> &initial_infected,
     const std::vector<std::pair<int,int>> &initial_vaccinated,
@@ -136,7 +136,7 @@ static int run_baseline(
     return saved_cnt; // return number of saved nodes 
 }
 
-static int run_baseline_with_seeds(
+int run_baseline_with_seeds(
     Graph &G,
     const std::vector<int> &initial_infected,
     const std::vector<std::pair<int,int>> &initial_vaccinated,

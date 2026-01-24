@@ -3,49 +3,42 @@
 #include <cmath>
 #include <iostream>
 
-Graph sample_ic_live_edge_graph(
+using AdjList = std::vector<std::vector<int>>;
+
+AdjList sample_ic_live_edge_adj_list(
     const Graph &G,
     uint64_t seed,
-    double INFECT_PROB = 0.2)
-{
+    double INFECT_PROB = 0.2
+) {
     const int N = G.nodes.size();
-    Graph::Params params_copy = G.params;
-    Graph Gs(params_copy, seed);
 
-    Gs.centers = G.centers;
-    Gs.nodes = G.nodes;
-    Gs.adj_list = G.adj_list;
-    Gs.nodesThreshold = G.nodesThreshold;
-    Gs.build_spatial_index();
-    Gs.adj_list.clear();
-    Gs.adj_list.resize(N);
+    AdjList sampled_adj(N);
 
     std::mt19937 rng(seed);
     std::uniform_real_distribution<double> uni(0.0, 1.0);
 
-    for (int u = 0; u < N; u++) {
+    for (int u = 0; u < N; ++u) {
         for (int v : G.adj_list[u]) {
             if (INFECT_PROB > uni(rng)) {
-                Gs.adj_list[u].insert(v);
+                sampled_adj[u].push_back(v);
             }
         }
     }
-    return Gs;
+    return sampled_adj;
 }
 
-
-std::vector<Graph> sample_ic_live_edge_topologies(
+std::vector<AdjList> sample_ic_live_edge_topologies(
     const Graph &G,
     int S,
     uint64_t seed,
-    double prob_infect)
-{
-    std::vector<Graph> samples;
+    double prob_infect
+) {
+    std::vector<AdjList> samples;
     samples.reserve(S);
 
-    for (int s = 0; s < S; s++) {
+    for (int s = 0; s < S; ++s) {
         samples.push_back(
-            sample_ic_live_edge_graph(G, seed + s)
+            sample_ic_live_edge_adj_list(G, seed + s, prob_infect)
         );
     }
     return samples;

@@ -6,15 +6,17 @@
 #include <random>
 #include <cmath>
 
-std::vector<Graph> sample_lt_live_edge_topologies(
+using AdjList = std::vector<std::vector<int>>;
+
+std::vector<AdjList> sample_lt_live_edge_topologies(
     const Graph &G,
     int S,
     uint64_t seed) ; 
 
-std::vector<Graph> sample_ic_live_edge_topologies(
+std::vector<AdjList> sample_ic_live_edge_topologies(
     const Graph &G,
     int S,
     uint64_t seed,
-    double prob_infect) ; 
+    double prob_infect);
 
 #endif 
