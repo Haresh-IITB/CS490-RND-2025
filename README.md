@@ -1,7 +1,7 @@
 # Limiting Disease Spreading in Human Networks
 This project is a C++ implementation of the models and algorithms described in the research paper "Limiting Disease Spreading in Human Networks" by Prof.Sujoy Bhore, Prof. Suraj Shetiya and Gargi Bakshi.
 
-The simulation aims to identify an optimal set of k nodes to vaccinate in a network to minimize the spread of a disease, given an initial set of infected nodes.
+The simulation aims to identify an optimal set of k nodes to vaccinate in a network to minimize the spread of a disease, given an initial set of infected nodes under batch distribution and dynamic settings.
 
 @Author Code : Haresh Gupta 
 
@@ -14,7 +14,9 @@ This implementation includes:
 
 * Disease Spread Models: The Independent Cascade (IC) and Linear Threshold (LT) models.
 
-* Vaccination Algorithms: A Greedy approach and a Local Search heuristic to find the optimal set of nodes for vaccination.
+* Vaccination Algorithms: This project explore an alternate to current alogirithms like greedy or heurestics based (local search, hill climbing), it explores linear programming as an alternate which provides good tradeoff of run time and %nodes saved. 
+
+* Model Simulation: This projects explore dynamic setting in contrast to the traditional static setting, by dynamic setting we mean that nodes migrate in the graph and edges modify accordingly, also the vaccination process is not done all at once but the vaccines are distributed in batches simulating real world. 
 
 ## Citation
 
@@ -41,6 +43,5 @@ Follow these instructions to compile and run the simulation on your local machin
 * From the **project's root directory**, run the make command. This will compile all source files and place the executable in the bin/ directory.
 
 ## Usage
-* To run the simulation: **./bin/simulation config.txt** 
-* This will generate a random graph that is spatially aware, and then perform the various vacciantion stratergies and store the results in the results/ directory.
-* To visualize the graph generated, along with seeing which nodes are vaccinated and infected run **python3 scripts/visualise.py**
+* Run the **./run_all_dynamic.sh**, to run all the algorithms with various diffusion model. The results are stores in the /results directory you may use the **./scripts/plot-csv.py** to generate plots for better visualisation 
+* You could modify, the configuration files in the config/ for the factor like number of topologies, percent infected nodes and percent vaccinated nodes and observe the effect of the vaccination algorithms under various setting

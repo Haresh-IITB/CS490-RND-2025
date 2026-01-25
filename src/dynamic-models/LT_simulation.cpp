@@ -21,7 +21,7 @@ void simulate_infection_spread_LT(
     for(int i = 0 ; i< (int)infected_mask.size(); ++i){
         if(infected_mask[i]){
             for(int v : G.adj_list[i]){
-                double w = 1.0 / std::max(1, (int)G.adj_list[v].size());
+                double w = 3.0 / std::max(1, (int)G.adj_list[v].size());
                 influence[v] += w ;
             }
         }
@@ -39,7 +39,7 @@ void simulate_infection_spread_LT(
                     influence[v] += w ;
 
                     // Check threshold
-                    if (influence[v] >= G.nodesThreshold[v] && P < uni(rng)) {
+                    if (influence[v] >= G.nodesThreshold[v] && P > uni(rng)) {
                         infected_mask[v] = true ;
                         next_frontier.push_back(v);
                     }
@@ -85,7 +85,7 @@ int LT_Simulation_test(
     std::vector<int> immune(N, 0);
     int immune_ptr = 0;
     int time_id = 0;
-
+    // std::cout << "Total scheduled vaccinations: " << Vaccinated_Node.size() << std::endl;       
     while (immune_ptr < (int)Vaccinated_Node.size() &&
            Vaccinated_Node[immune_ptr].second == time_id) {
         immune[Vaccinated_Node[immune_ptr].first] = 1;
@@ -110,10 +110,10 @@ int LT_Simulation_test(
     std::mt19937 rng(seed);
     std::uniform_real_distribution<double> uni(0.0, 1.0);
 
-    constexpr double INFLUENCE_SCALE = 1.0;
+    constexpr double INFLUENCE_SCALE = 3.0;
 
     while (!frontier.empty()) {
-
+        // std::cout << "Step " << steps << " | Frontier Size: " << frontier.size() << " | Active Count: " << activeCount << " Vaccine Count : "<< std::count(immune.begin(), immune.end(), 1) << std::endl;
         // Apply scheduled vaccinations
         while (immune_ptr < (int)Vaccinated_Node.size() &&
                Vaccinated_Node[immune_ptr].second == time_id) {
@@ -141,7 +141,7 @@ int LT_Simulation_test(
 
                 influence[v] += w;
 
-                if (influence[v] >= Gc.nodesThreshold[v] && prob_infect < uni(rng)) {
+                if (influence[v] >= Gc.nodesThreshold[v] && prob_infect > uni(rng)) {
                     active[v] = true;
                     next_frontier.push(v);
                     activeCount++;
@@ -203,7 +203,7 @@ int LT_Simulation_search(
 
     int steps = 0;
 
-    constexpr double INFLUENCE_SCALE = 1.0;
+    constexpr double INFLUENCE_SCALE = 3.0;
 
     while (!frontier.empty()) {
         std::queue<int> next_frontier;
@@ -225,7 +225,7 @@ int LT_Simulation_search(
 
                 influence[v] += w;
 
-                if (influence[v] >= Gc.nodesThreshold[v] && prob_infect < uni(rng)) {
+                if (influence[v] >= Gc.nodesThreshold[v] && prob_infect > uni(rng)) {
                     active[v] = true;
                     next_frontier.push(v);
                     activeCount++;

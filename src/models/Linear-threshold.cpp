@@ -94,7 +94,7 @@ int LinearThreshold_Simulator(
 
                 // Influence weight
                 double weight =
-                    1.0 / std::max(1, (int)Gc.adj_list[v].size());
+                    3.0 / std::max(1, (int)Gc.adj_list[v].size());
 
                 Accumulated_Influence[v] += weight;
 

@@ -65,6 +65,7 @@ static void simulate_infection_spread_lt(
     
     std::unordered_set<int> newly_infected(infected_list.begin(), infected_list.end());
     std::vector<int> frontier = infected_list;
+    // std::cout << "Initial Infected: " << newly_infected.size() << std::endl;
 
     for (int t = 0; t < steps; ++t) {
         std::vector<int> next_frontier;
@@ -72,11 +73,11 @@ static void simulate_infection_spread_lt(
             for (int v : G.adj_list[u]) {
                 // If v is susceptible (not infected, not vaccinated)
                 if (newly_infected.find(v) == newly_infected.end() && !vaccinated_mask[v]) {
-                    double w = 1.0 / std::max(1, (int)G.adj_list[v].size());
+                    double w = 3.0 / std::max(1, (int)G.adj_list[v].size());
                     influence[v] += w ;
 
                     // Check threshold
-                    if (influence[v] >= G.nodesThreshold[v]) {
+                    if (influence[v] >= G.nodesThreshold[v] && P > uni(rng)) {
                         newly_infected.insert(v);
                         next_frontier.push_back(v);
                     }
@@ -86,7 +87,7 @@ static void simulate_infection_spread_lt(
         frontier = next_frontier;
         if (frontier.empty()) break;
     }
-
+    // std::cout << "Total Infected after LT: " << newly_infected.size() << std::endl;
     // Update the master list
     infected_list.assign(newly_infected.begin(), newly_infected.end()); // Contains all the infected nodes after simulation
 }
@@ -136,27 +137,21 @@ static LPModel build_lp_model(
 
     LPModel lp(N, S);
 
-    // --- 1. Vaccination Variables (I) ---
     for (int i = 0; i < N; i++) {
         double lb = 0.0, ub = 1.0;
         
         if (pre_vaccinated_mask[i]) {
-            // Already vaccinated: Force 1
             lb = 1.0; ub = 1.0; 
         } else if (already_infected_mask[i]) {
-            // Already infected: Force 0 (Cannot waste vaccine)
             lb = 0.0; ub = 0.0;
         }
         
         lp.I[i] = lp.model.addVar(lb, ub, 0.0, GRB_CONTINUOUS);
     }
 
-    // --- 2. State Variables (x) ---
     for (int i = 0; i < N; i++) {
         for (int s = 0; s < S; s++) {
-            // Obj coeff: 1.0/S (Minimize expected infection)
             if(already_infected_mask[i]) {
-                // Already infected: Force 1
                 lp.x[i][s] = lp.model.addVar(1.0, 1.0, 1.0 / S, GRB_CONTINUOUS);
             } else{
                 lp.x[i][s] = lp.model.addVar(0.0, 1.0, 1.0 / S, GRB_CONTINUOUS);
@@ -165,27 +160,22 @@ static LPModel build_lp_model(
     }
     lp.model.update();
 
-    // --- 3. Initial Infection Constraints ---
     for (int s = 0; s < S; s++) {
         for (int i : current_infected) {
             lp.model.addConstr(lp.x[i][s] == 1.0);
         }
     }
 
-    // --- 4. Spread Constraints (Cut-based) ---
     for (int s = 0; s < S; s++) {
         const AdjList &adj = samples[s];
         for (int j = 0; j < N; j++) {
             for (int i : adj[j]) {
-                // If neighbor j is infected, i gets infected unless vaccinated
                 // x[i] >= x[j] - I[i]  =>  x[i] - x[j] + I[i] >= 0
                 lp.model.addConstr(lp.x[i][s] - lp.x[j][s] + lp.I[i] >= 0.0);
             }
         }
     }
 
-    // --- 5. Budget Constraint ---
-    // Sum of ALL vaccinations (past + present) <= Cumulative Budget
     GRBLinExpr total_vacc = 0;
     for (int i = 0; i < N; i++) total_vacc += lp.I[i];
     lp.model.addConstr(total_vacc <= total_cumulative_budget);
@@ -194,7 +184,6 @@ static LPModel build_lp_model(
     return lp;
 }
 
-// Extracts best candidates using Iterative Rounding (IRP) Logic adapted for Rolling Horizon
 static std::vector<int> solve_lp_and_pick_new(
     LPModel &lp, 
     int marginal_budget,
@@ -203,7 +192,6 @@ static std::vector<int> solve_lp_and_pick_new(
 ) {
     lp.model.optimize();
     
-    // Get scores for all nodes
     std::vector<double> scores(lp.N);
     for (int i = 0; i < lp.N; i++) {
         scores[i] = lp.I[i].get(GRB_DoubleAttr_X);
@@ -213,7 +201,6 @@ static std::vector<int> solve_lp_and_pick_new(
     std::vector<int> candidates;
     candidates.reserve(lp.N);
     for(int i=0; i<lp.N; ++i) {
-        // Only consider nodes that are VALID (not vaccinated, not infected)
         if(!pre_vaccinated_mask[i] && !already_infected_mask[i]) {
             candidates.push_back(i);
         }
@@ -254,9 +241,7 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
 
     int N = Gc.nodes.size();
     
-    // Global State
     std::vector<bool> vaccinated_mask(N, false);
-    // This tracks the "Real World" infection state
     std::vector<int> current_infected_list = initial_infected; 
 
     std::vector<std::pair<int,int>> all_vaccinated_nodes;
@@ -267,7 +252,6 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
         int marginal_budget = budget_schedule[t];
         current_cumulative_budget += marginal_budget;
 
-        // Sync masks for the LP
         std::vector<bool> already_infected_mask(N, false);
         for(int u : current_infected_list) already_infected_mask[u] = true;
 
@@ -275,14 +259,12 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
                   << " | Current Infected (Real): " << current_infected_list.size() 
                   << " | Budget: " << marginal_budget << std::endl;
 
-        // 1. SAMPLE: Generate topologies (Prediction of connectivity)
         std::vector<AdjList> samples;
         if (model == IC)
             samples = sample_ic_live_edge_topologies(Gc, num_samples_per_step, 42 + t, prob_infect);
         else if (model == LT)
             samples = sample_lt_live_edge_topologies(Gc, num_samples_per_step, 42 + t, prob_infect);
 
-        // 2. OPTIMIZE: Run LP to find best NEW vaccines
         LPModel lp = build_lp_model(
             samples, 
             current_infected_list, 
@@ -291,8 +273,6 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
             current_cumulative_budget
         );
 
-        // 3. DECIDE: Extract top candidates
-        // Note: This is "Simple Rounding". For better quality, use Iterative Rounding here.
         std::vector<int> new_vaccines = solve_lp_and_pick_new(
             lp, 
             marginal_budget, 
@@ -300,24 +280,18 @@ std::vector<std::pair<int,int>> run_rolling_horizon_strategy(
             already_infected_mask
         );
 
-        // 4. ACT: Apply vaccines
         for (int v : new_vaccines) {
             vaccinated_mask[v] = true;
             all_vaccinated_nodes.push_back({v,time_id});
         }
         std::cout << "    Vaccinated " << new_vaccines.size() << " nodes." << std::endl;
-
-        // If no new vaccinations, returnearly
         if(new_vaccines.empty() && marginal_budget > 0) {
             std::cout << "No new vaccinations possible. Ending early.\n";
             break;
         }
 
-        // 5. OBSERVE: Simulate "Reality" 
-        // We use the base_graph (or a specific realization) to roll the dice 
-        // and see who actually gets sick before the next decision.
         simulate_infection_spread(
-            Gc,             // The "Environment"
+            Gc,             
             current_infected_list,  // Input/Output: Will expand based on IC model
             vaccinated_mask,        // Vaccines protect nodes
             time_step_gap,          // How long we wait

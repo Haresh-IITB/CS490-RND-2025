@@ -33,7 +33,6 @@ void Local_Search(
     for (int u : initial_infected)
         infected_mask[u] = true;
 
-    // Initial random selection
     std::mt19937 gen(42);
     std::uniform_int_distribution<> dis(0, N - 1);
 
@@ -55,7 +54,6 @@ void Local_Search(
     }
     
 
-    // Seeds
     std::vector<uint64_t> array_seed(T);
     for (int t = 0; t < T; ++t)
         array_seed[t] = 2024 + t;
@@ -66,12 +64,10 @@ void Local_Search(
     while (!converged && no_improve_iters < max_no_improve_iters) {
         converged = true;
 
-        // SAFE iteration snapshot
         std::vector<int> vaccinated_snapshot(
             Vaccinated_List.begin(), Vaccinated_List.end()
         );
 
-        // Compute baseline ONCE
         int baseline_saved = 0;
         for (int t = 0; t < T; ++t)
             baseline_saved += Simulator(

@@ -14,9 +14,6 @@
 #define DBG(x) do {} while(0)
 #endif
 
-// ------------------------------------------------------------
-// O(E) PageRank iteration
-// ------------------------------------------------------------
 std::vector<double> iter_pg_oe(
     const Graph &G,
     const std::vector<double> &pageVal,
@@ -25,7 +22,6 @@ std::vector<double> iter_pg_oe(
     const int N = G.nodes.size();
     std::vector<double> newPageVal(N, 0.0);
 
-    // 1) Compute dangling mass
     double dangling_sum = 0.0;
     for (int u = 0; u < N; u++) {
         if (G.adj_list[u].empty())
@@ -34,7 +30,6 @@ std::vector<double> iter_pg_oe(
 
     double dangling_contrib = dangling_sum / N;
 
-    // 2) Distribute rank over edges (O(E))
     for (int u = 0; u < N; u++) {
         if (G.adj_list[u].empty()) continue;
 
@@ -44,13 +39,11 @@ std::vector<double> iter_pg_oe(
         }
     }
 
-    // 3) Add teleportation + dangling correction
     double teleport = (1.0 - alpha) / N;
     for (int i = 0; i < N; i++) {
         newPageVal[i] += teleport + alpha * dangling_contrib;
     }
 
-    // 4) Normalize (numerical stability)
     double sum = 0.0;
     for (double v : newPageVal) sum += v;
     for (double &v : newPageVal) v /= sum;
@@ -58,9 +51,6 @@ std::vector<double> iter_pg_oe(
     return newPageVal;
 }
 
-// ------------------------------------------------------------
-// Convergence check (L1 average)
-// ------------------------------------------------------------
 bool converged(
     const std::vector<double> &a,
     const std::vector<double> &b,
@@ -75,9 +65,6 @@ bool converged(
     return diff < tol;
 }
 
-// ------------------------------------------------------------
-// PageRank-based vaccination (O(E))
-// ------------------------------------------------------------
 std::vector<int> PageRank(
     Graph &G,
     const int &K,
@@ -104,7 +91,6 @@ std::vector<int> PageRank(
         pageVal = newPageVal;
     }
 
-    // Sort nodes by PageRank
     std::vector<int> nodes(N);
     std::iota(nodes.begin(), nodes.end(), 0);
 
@@ -116,15 +102,11 @@ std::vector<int> PageRank(
     std::set<int> infectedSet(InfectedNodes.begin(), InfectedNodes.end());
     std::vector<int> vaccinated;
 
-    // print the nodes with it's pagerank value
     DBG("[PR] Final PageRank values:");
     for (int u : nodes) {
         DBG("Node " << u << " : " << pageVal[u]);
     }
 
-    // --------------------------------------------------------
-    // Method 1: Guard neighbors of infected (PR-prioritized)
-    // --------------------------------------------------------
     if (method) {
         DBG("[PR] Method 1: neighbor guarding");
 
@@ -140,9 +122,7 @@ std::vector<int> PageRank(
             if ((int)vaccinated.size() >= K) break;
         }
     }
-    // --------------------------------------------------------
-    // Method 0: Pure top-K PageRank
-    // --------------------------------------------------------
+    
     else {
         DBG("[PR] Method 0: pure PageRank");
 
